@@ -6,6 +6,14 @@ const form = reactive({ email: '', password: '' })
 const error = ref('')
 const busy = ref(false)
 
+const notice = computed(() =>
+  route.query.reset
+    ? 'Password updated. Sign in with your new password.'
+    : route.query.verified
+      ? 'Email verified — welcome aboard.'
+      : '',
+)
+
 async function submit() {
   error.value = ''
   busy.value = true
@@ -26,17 +34,40 @@ async function submit() {
     <h1>Welcome back</h1>
     <p class="sub">Sign in to manage the collection.</p>
 
+    <div v-if="notice" class="banner banner-ok">{{ notice }}</div>
     <div v-if="error" class="banner banner-error">{{ error }}</div>
 
     <form @submit.prevent="submit">
       <div class="field">
         <label class="label" for="email">Email</label>
-        <input id="email" v-model="form.email" class="input" type="email" autocomplete="email" required autofocus />
+        <input
+          id="email"
+          v-model="form.email"
+          class="input"
+          type="email"
+          name="email"
+          autocomplete="username"
+          autocapitalize="none"
+          spellcheck="false"
+          required
+          autofocus
+        />
       </div>
 
       <div class="field" style="margin-top: 12px">
-        <label class="label" for="password">Password</label>
-        <input id="password" v-model="form.password" class="input" type="password" autocomplete="current-password" required />
+        <div class="label-row">
+          <label class="label" for="password">Password</label>
+          <NuxtLink to="/forgot-password" class="link-sm">Forgot password?</NuxtLink>
+        </div>
+        <input
+          id="password"
+          v-model="form.password"
+          class="input"
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          required
+        />
       </div>
 
       <button type="submit" class="btn btn-primary auth-submit" :disabled="busy">

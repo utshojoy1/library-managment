@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   requireRole(event, STAFF)
 
   const body = await readBody(event).catch(() => ({}))
-  const barcode = String(body?.barcode ?? '').trim()
+  const barcode = normalizeCode(body?.barcode)
   if (!barcode) throw createError({ statusCode: 400, statusMessage: 'Copy barcode is required' })
 
   return db.transaction(async (tx) => {

@@ -1,7 +1,7 @@
 # Library Management System — Plan
 
 **Stack:** Nuxt 4 · PostgreSQL 16 · Drizzle ORM
-**Status:** v2 shipped — accounts, roles, circulation (2026-11-06)
+**Status:** v3 shipped — accounts, email verification, password reset (2026-11-06)
 **Repo:** `github.com/utshojoy1/libery-managment`
 
 ---
@@ -14,31 +14,36 @@
 4. [Architecture](#4-architecture)
 5. [Data model](#5-data-model)
 6. [Auth design](#6-auth-design)
-7. [Business rules](#7-business-rules)
-8. [API](#8-api)
-9. [Project layout](#9-project-layout)
-10. [Verification](#10-verification)
-11. [Deferred](#11-deferred)
-12. [Roadmap](#12-roadmap)
-13. [Decisions log](#13-decisions-log)
+7. [Account flows](#7-account-flows)
+8. [Business rules](#8-business-rules)
+9. [API](#9-api)
+10. [Project layout](#10-project-layout)
+11. [Verification](#11-verification)
+12. [Deferred](#12-deferred)
+13. [Roadmap](#13-roadmap)
+14. [Decisions log](#14-decisions-log)
 
 ---
 
 ## 1. What shipped
 
-A staff + member web app with real accounts: catalog, members, issue/return, and a super-admin screen for access management.
+A staff + member web app with real accounts, email verification, and self-service password reset.
 
 | Screen | Route | Access |
 |---|---|---|
 | Login | `/login` | public |
 | Register | `/register` | public |
-| Dashboard | `/` | signed in — staff see library stats, members see their own loans |
+| Forgot password | `/forgot-password` | public |
+| Reset password | `/reset-password?token=…` | public |
+| Verify email | `/verify-email?token=…` | public |
+| Dashboard | `/` | signed in — staff see stats, members see their loans |
 | Catalog | `/catalog` | signed in — staff can add titles |
 | Members | `/members` | staff |
 | Circulation | `/circulation` | staff |
 | Users & access | `/admin/users` | super admin |
+| Dev inbox | `/dev/mail` | development only |
 
-Stack as built: Nuxt 4.6.4 (Nitro 2.13.6, Vue 3.5.45), PostgreSQL 16.15 in Docker, Drizzle ORM 0.45.4 + drizzle-kit 0.31.11, `pg` 8.23.1, Node 24. Hand-written CSS, no UI framework, no state library.
+Stack as built: Nuxt 4.6.4 (Nitro 2.13.6, Vue 3.5.45), PostgreSQL 16.15 in Docker, Drizzle ORM 0.45.4 + drizzle-kit 0.31.11, `pg` 8.23.1, nodemailer 7 (optional), Node 24. Hand-written CSS, no UI framework.
 
 ---
 
@@ -57,11 +62,11 @@ Three roles, ordered: `member` < `admin` < `super_admin`.
 
 Enforcement is layered:
 
-1. **Server** — every route calls `requireUser()` or `requireRole()`. This is the real boundary; the UI is cosmetic by comparison.
-2. **Route middleware** — `app/middleware/auth.global.ts` resolves `/api/auth/me` once per load, redirects anonymous users to `/login?redirect=…`, and blocks pages whose `definePageMeta({ roles })` don't match.
-3. **UI** — navigation items and action buttons are hidden by role, so people don't click into 403s.
+1. **Server** — every route calls `requireUser()` or `requireRole()`; this is the real boundary.
+2. **Route middleware** — resolves `/api/auth/me` once per load, redirects anonymous users to `/login?redirect=…`, and enforces `definePageMeta({ roles })`.
+3. **UI** — nav items and actions are hidden by role.
 
-Registration is open and always creates a `member`; only a super admin can promote to `admin` or `super_admin`.
+Open registration always creates a `member`; only a super admin promotes to `admin` or `super_admin`.
 
 ---
 
@@ -75,7 +80,7 @@ npm run db:seed              # prints demo accounts
 npm run dev -- --port 3005   # http://localhost:3005
 ```
 
-**Demo accounts** (created by the seed):
+**Demo accounts** (seeded, already verified):
 
 | Role | Email | Password |
 |---|---|---|
@@ -83,7 +88,9 @@ npm run dev -- --port 3005   # http://localhost:3005
 | Admin | `admin@library.local` | `Admin12345` |
 | Member | `member@library.local` | `Member12345` |
 
-Database: container `library-db`, host port **5434** (5433 belongs to another local Postgres). `DATABASE_URL=postgres://library:library@127.0.0.1:5434/library`.
+Database: container `library-db`, host port **5434** (5433 belongs to another local Postgres).
+
+Mail: without `SMTP_URL` every message lands in the outbox and is visible at `/dev/mail`. With `SMTP_URL` + `MAIL_FROM` set, nodemailer delivers and the outbox records the status.
 
 ---
 
@@ -94,14 +101,15 @@ Browser (Nuxt SSR pages)
     │  httpOnly session cookie
 Nitro middleware  ── resolves session → event.context.user
     │
-Nitro routes (server/api/*)  ── requireUser / requireRole
-    │  Drizzle
-PostgreSQL 16 (users, sessions, books, copies, members, loans)
+Nitro routes  ── requireUser / requireRole
+    ├── Drizzle → PostgreSQL (users, sessions, email_tokens, emails,
+    │                        books, copies, members, loans)
+    └── sendMail() → SMTP (if configured) + outbox row
 ```
 
-One deployable Node app, one database. No queue, no object storage, no background workers yet.
+One deployable Node app, one database. No queue or background workers yet — mail is sent inline, which is correct at this volume.
 
-**Concurrency:** checkout/return run in `db.transaction` and take `SELECT … FOR UPDATE` on the copy row, so two desks cannot issue the same physical copy.
+**Concurrency:** checkout/return run in a transaction and take `SELECT … FOR UPDATE` on the copy row.
 
 ---
 
@@ -110,7 +118,8 @@ One deployable Node app, one database. No queue, no object storage, no backgroun
 ```mermaid
 erDiagram
   USERS ||--o| MEMBERS : "library card"
-  USERS ||--o{ SESSIONS : "has"
+  USERS ||--o{ SESSIONS : has
+  USERS ||--o{ EMAIL_TOKENS : has
   BOOKS ||--o{ COPIES : "has physical"
   COPIES ||--o{ LOANS : "loaned as"
   MEMBERS ||--o{ LOANS : borrows
@@ -118,8 +127,10 @@ erDiagram
 
 | Table | Columns |
 |---|---|
-| `users` | id, email (unique), name, password_hash, role, is_active, created_at |
+| `users` | id, email (unique), name, password_hash, role, is_active, email_verified_at, created_at |
 | `sessions` | id (sha256 of token), user_id → users, expires_at, created_at |
+| `email_tokens` | id, user_id → users, purpose (`verify_email` \| `reset_password`), token_hash (unique), expires_at, used_at, created_at |
+| `emails` | id, to, subject, text, status (`queued` \| `sent` \| `failed`), error, created_at, sent_at |
 | `members` | id, user_id → users (unique, nullable), member_no (unique), name, email, phone, joined_at, is_active |
 | `books` | id, title, author, isbn, category, published_year, created_at |
 | `copies` | id, book_id → books, barcode (unique), status `available \| on_loan` |
@@ -132,7 +143,7 @@ CREATE UNIQUE INDEX loans_one_active_per_copy ON loans (copy_id) WHERE status = 
 CREATE INDEX loans_active_member ON loans (member_id) WHERE status = 'active';
 ```
 
-Notes: authors are a text column (no join table yet); loan rules are constants, not a `membership_types` table; no branches, fines or reservations yet.
+Notes: authors are a text column (no join table yet); loan rules are constants, not settings; no branches, fines or reservations yet.
 
 ---
 
@@ -144,15 +155,46 @@ Notes: authors are a text column (no join table yet); loan rules are constants, 
 | Session token | 32 random bytes (base64url) in cookie `library_session`; DB stores only SHA-256 |
 | Cookie flags | `httpOnly`, `SameSite=Lax`, `Secure` in production, 7-day expiry |
 | Logout | Deletes the session row and clears the cookie |
-| Disabled accounts | Rejected at login and on every request (session resolves to null) |
-| Enumeration | Login returns the same "Invalid email or password" for unknown and wrong-password |
-| Escalation | Role changes are super-admin only; no self-demotion/self-disable; last active super admin is protected |
-
-Not yet: password reset, email verification, rate limiting, 2FA, session list/revoke UI.
+| Disabled accounts | Rejected at login and on every request |
+| Enumeration | Login says "Invalid email or password"; forgot-password always returns 200 |
+| Escalation | Role changes are super-admin only; no self-demotion/self-disable; last super admin protected |
 
 ---
 
-## 7. Business rules
+## 7. Account flows
+
+### Email verification
+
+1. Register (or press **Resend**) → 32-byte token, stored as SHA-256 with a 24-hour expiry.
+2. Any earlier unused verification token is invalidated first, so old emails stop working.
+3. Link `/verify-email?token=…` → the page posts the token, which is marked used and `users.email_verified_at` is set.
+4. Unverified users can still sign in; a banner offers a resend. Resends are limited to 3 per 10 minutes.
+5. The token is consumed on POST, not on page load — link scanners in mail clients can't burn it.
+
+### Password reset
+
+1. `/forgot-password` → always 200, whether or not the address exists.
+2. For a real, active account: 1-hour token, previous reset tokens invalidated, email sent.
+3. `/reset-password?token=…` → new password (min 8 chars) → token consumed.
+4. Every session for that user is deleted, so a compromised session dies with the reset.
+5. Rate limits: 3 requests per address / 15 min, 10 attempts per IP / 15 min.
+
+### Tokens in general
+
+- Random 32 bytes, base64url; only SHA-256 stored.
+- Single use (`used_at`), purpose-scoped, expiring.
+- Invalid/expired/reused links return `400` with a "request a new one" message.
+
+### Mail transport
+
+- `sendMail()` writes every message to `emails` first.
+- With `SMTP_URL` set it delivers via nodemailer and records `sent` / `failed` + error.
+- Without SMTP it stays `queued`, prints to the server log, and appears in `/dev/mail`.
+- `/api/dev/outbox` returns 404 when `NODE_ENV=production`.
+
+---
+
+## 8. Business rules
 
 | Rule | Where |
 |---|---|
@@ -166,14 +208,19 @@ Not yet: password reset, email verification, rate limiting, 2FA, session list/re
 
 ---
 
-## 8. API
+## 9. API
 
 | Method | Route | Access | Purpose |
 |---|---|---|---|
-| POST | `/api/auth/register` | public | Create member account (+ library card) |
+| POST | `/api/auth/register` | public | Create member (+ card), send verification |
 | POST | `/api/auth/login` | public | Start session |
 | POST | `/api/auth/logout` | any | End session |
 | GET | `/api/auth/me` | signed in | Current user |
+| POST | `/api/auth/verify-email` | public | `{ token }` |
+| POST | `/api/auth/resend-verification` | signed in | New confirmation link |
+| POST | `/api/auth/forgot-password` | public | `{ email }` — always 200 |
+| POST | `/api/auth/reset-password` | public | `{ token, password }` |
+| GET | `/api/dev/outbox` | dev only | Recent messages |
 | GET | `/api/stats` | staff | Counters |
 | GET | `/api/books?q=` | signed in | Titles + availability |
 | POST | `/api/books` | staff | Add title (+ copies) |
@@ -188,21 +235,26 @@ Not yet: password reset, email verification, rate limiting, 2FA, session list/re
 
 ---
 
-## 9. Project layout
+## 10. Project layout
 
 ```
 app/
   app.vue, layouts/{default,auth}.vue
   composables/useAuth.ts        session state + role helpers
-  middleware/auth.global.ts     redirect + page-role guard
+  middleware/auth.global.ts     public paths, redirect + page-role guard
   pages/                        index, catalog, members, circulation,
-                                login, register, admin/users
+                                login, register, forgot-password,
+                                reset-password, verify-email,
+                                admin/users, dev/mail
   utils/format.ts
   assets/css/main.css
 server/
-  api/                          auth/, admin/, books, members, loans/, stats
+  api/                          auth/, admin/, dev/, books, members, loans/, stats
   middleware/auth.ts            session → event.context.user
   utils/auth.ts                 hashing, sessions, requireUser/requireRole
+  utils/tokens.ts               issue/consume single-use tokens
+  utils/mailer.ts               SMTP + outbox, email templates
+  utils/rate-limit.ts           in-memory fixed-window limiter
   db/{schema,client}.ts
 drizzle/                        migrations
 scripts/seed.mjs
@@ -211,80 +263,93 @@ types/page-meta.d.ts            PageMeta.roles augmentation
 
 ---
 
-## 10. Verification
+## 11. Verification
 
-Tested against the running app with seeded data:
+Tested against the running app:
 
-- Anonymous `/` → **302** to `/login?redirect=/`; `/api/stats` → **401**.
-- Login with each demo account returns the right role; wrong password → **401**.
-- Member: `/api/loans/mine` → 200, `/api/members` → **403**, `POST /api/books` → **403**, `/members` → **302** to `/`.
-- Admin: `/api/admin/users` → **403**.
-- Super admin: users list → 200; promote a member to admin → 200; self-demotion → **400**.
-- Register: new account gets `member` + `M006`; duplicate email → **409**; short password → **400**.
-- Logout → `/api/auth/me` **401**.
-- UI flows verified in a headless browser: sign-in redirect, role-aware sidebar, member dashboard, super-admin user table.
+**Accounts & roles**
+- Anonymous `/` → 302 to `/login?redirect=/`; `/api/stats` → 401.
+- Each demo account logs in with the right role; wrong password → 401.
+- Member: `/api/loans/mine` 200; `/api/members` 403; `POST /api/books` 403; `/members` → redirected home.
+- Admin: `/api/admin/users` 403. Super admin: 200; promote works; self-demotion 400.
+- Register: new account `member` + `M006`; duplicate email 409; short password 400.
+- Logout → `/api/auth/me` 401.
+
+**Email verification**
+- Register → `emailVerified: false`; outbox holds a 24-hour link.
+- POST token → 200; `/api/auth/me` then reports `emailVerified: true`.
+- Reusing the token → 400. Resending when verified → 400. Bogus token → 400.
+
+**Password reset**
+- Forgot for a known address → 200 + outbox link; unknown address → 200 with no mail.
+- Reset token → 200; old password 401; new password 200; the pre-reset session 401.
+- Reusing the reset token → 400.
+
+**UI**
+- Browser-tested: login, forgot-password success state, dev inbox, reset form, unverified banner on the dashboard.
 
 ---
 
-## 11. Deferred
+## 12. Deferred
 
 | Area | Why deferred |
 |---|---|
-| Fines & payments | Needs policy: rate, grace days, cap, currency |
+| Login rate limiting | Reset/resend are limited; login still needs a per-IP/account limiter |
+| Session list & revoke UI | Sessions are already revoked on reset; need a management screen |
+| 2FA / passkeys | Hardening after public exposure |
+| Fines & payments | Needs policy: rate, grace, cap, currency |
 | Reservations / hold queue | Needs a member-facing request flow |
 | Renewals | Depends on holds + limits config |
-| Email (receipts, due reminders) | Needs a queue and templates |
-| pg-boss jobs | Overdue is derived at query time today |
-| Reports & audit log | Audit needs "who did what" — auth now makes this possible |
-| Password reset / verification | Requires email |
-| Rate limiting, 2FA, session management UI | Hardening before public exposure |
+| Background jobs (pg-boss) | Mail is inline today; fine at this volume |
+| Reports & audit log | Audit now possible since actions are attributable |
 | Multi-branch, S3 covers, tests/CI, Docker deploy | Later phases |
 
 ---
 
-## 12. Roadmap
+## 13. Roadmap
 
-### Phase 1 — Accounts ✅ (done)
+### Phase 1 — Accounts ✅
+Login, register, logout, roles, super-admin access management.
 
-Login, register, logout, roles, super-admin access management, server-side guards.
+### Phase 2 — Account flows ✅
+Email verification, password reset, tokens, rate limits, dev inbox, SMTP support.
 
-### Phase 2 — Hardening (≈2 days)
-
-- Login rate limiting (per IP + per account) and password reset via email.
+### Phase 3 — Hardening (≈1–2 days)
+- Login rate limiting (per IP and per account).
 - Session list + revoke in `/admin/users`.
-- Test suite: due-date/limit units, Playwright happy paths.
+- Unit tests for tokens/limits and Playwright happy paths.
 - Production build + Dockerfile.
 
-### Phase 3 — Money (≈3–4 days)
+### Phase 4 — Money (≈3–4 days)
+- `fines` + `payments`; rate, grace, cap from settings.
+- Mark fines on return; cash payment at the desk.
 
-- `fines` + `payments` tables; rate, grace, cap from settings.
-- Mark fines on return; cash payment at the desk; member balance view.
-
-### Phase 4 — Holds & self-service (≈4–5 days)
-
+### Phase 5 — Holds & self-service (≈4–5 days)
 - Reservations with FIFO queue and hold-shelf expiry.
 - Promote next hold on return.
-- Email receipts and reminders (pg-boss + Resend).
+- Email receipts and due reminders (pg-boss + Resend).
 
-### Phase 5 — Scale out (≈1 week)
-
-- Multi-branch (branch_id on copies/loans/members).
-- Reports: circulation, overdue list, popular titles, fines collected.
-- Audit log, backups/monitoring, deploy pipeline.
+### Phase 6 — Scale out (≈1 week)
+- Multi-branch, reports, audit log, backups/monitoring, deploy pipeline.
 
 ---
 
-## 13. Decisions log
+## 14. Decisions log
 
 | Date | Decision | Rationale |
 |---|---|---|
 | 2026-11-06 | Simple web version first | Fastest path to something usable |
 | 2026-11-06 | Real PostgreSQL | Same stack as target system |
 | 2026-11-06 | Hand-written CSS, no UI framework | Few screens; avoids a dependency |
-| 2026-11-06 | DB-backed sessions + scrypt, no auth library | ~80 lines, no native deps, full control |
-| 2026-11-06 | Open registration → `member` role only | Staff access must be granted by a super admin |
+| 2026-11-06 | DB-backed sessions + scrypt, no auth library | Small, no native deps, full control |
+| 2026-11-06 | Open registration → `member` role only | Staff access is granted, not self-served |
 | 2026-11-06 | Super admin cannot demote/disable self; last super admin protected | Avoids locking everyone out |
-| 2026-11-06 | Member accounts auto-create a library card | Lets staff lend to self-registered users |
+| 2026-11-06 | Member accounts auto-create a library card | Self-registered users can borrow |
+| 2026-11-06 | Hashed, single-use, purpose-scoped email tokens | Leaked DB rows can't be replayed; reuse fails |
+| 2026-11-06 | Token consumed on POST, not page load | Mail-client link scanners can't burn links |
+| 2026-11-06 | Password reset revokes all sessions | Kills a compromised session at reset |
+| 2026-11-06 | Outbox-first mail with optional SMTP | Works offline for dev, one env var for production |
+| 2026-11-06 | Dev inbox 404s in production | Prevents leaking reset links |
 
 ### Still open
 

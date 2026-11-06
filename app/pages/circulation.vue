@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { normalizeCode } from '#shared/utils/codes'
+
 definePageMeta({ roles: ['admin', 'super_admin'] })
 const { data: loans, refresh } = await useFetch('/api/loans', { query: { limit: 10 } })
 
@@ -14,12 +16,22 @@ const okIn = ref('')
 
 const barcodeInput = ref<HTMLInputElement>()
 
+// Covers values that arrive without keystrokes: browser autofill, paste,
+// and scanners that drop the whole code in at once.
+function tidyCodes() {
+  checkout.memberNo = normalizeCode(checkout.memberNo)
+  checkout.barcode = normalizeCode(checkout.barcode)
+  returnForm.barcode = normalizeCode(returnForm.barcode)
+}
+
 onMounted(() => barcodeInput.value?.focus())
 
 async function issue() {
   busyOut.value = true
   errorOut.value = ''
   okOut.value = ''
+  checkout.memberNo = normalizeCode(checkout.memberNo)
+  checkout.barcode = normalizeCode(checkout.barcode)
   try {
     const res = await $fetch('/api/loans/checkout', { method: 'POST', body: checkout })
     okOut.value = `Issued “${res.bookTitle}” to ${res.memberName} — due ${formatDate(res.dueAt)}.`
@@ -37,6 +49,7 @@ async function giveBack() {
   busyIn.value = true
   errorIn.value = ''
   okIn.value = ''
+  returnForm.barcode = normalizeCode(returnForm.barcode)
   try {
     const res = await $fetch('/api/loans/return', { method: 'POST', body: returnForm })
     okIn.value = res.daysLate
@@ -71,7 +84,15 @@ async function giveBack() {
           <form @submit.prevent="issue">
             <div class="field" style="margin-bottom: 10px">
               <label class="label" for="memberNo">Member number</label>
-              <input id="memberNo" v-model="checkout.memberNo" class="input" placeholder="M001" required />
+              <input
+                id="memberNo"
+                v-model="checkout.memberNo"
+                class="input code-input"
+                placeholder="M001"
+                @input="checkout.memberNo = normalizeCode(checkout.memberNo)"
+                @change="tidyCodes"
+                required
+              />
             </div>
             <div class="field">
               <label class="label" for="outBarcode">Copy barcode</label>
@@ -79,8 +100,10 @@ async function giveBack() {
                 id="outBarcode"
                 ref="barcodeInput"
                 v-model="checkout.barcode"
-                class="input"
+                class="input code-input"
                 placeholder="B0001-1"
+                @input="checkout.barcode = normalizeCode(checkout.barcode)"
+                @change="tidyCodes"
                 required
               />
             </div>
@@ -105,8 +128,10 @@ async function giveBack() {
               <input
                 id="inBarcode"
                 v-model="returnForm.barcode"
-                class="input"
+                class="input code-input"
                 placeholder="B0001-1"
+                @input="returnForm.barcode = normalizeCode(returnForm.barcode)"
+                @change="tidyCodes"
                 required
               />
             </div>

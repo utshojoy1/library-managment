@@ -30,6 +30,22 @@ async function signOut() {
   useAuthUser().value = null
   await navigateTo('/login')
 }
+
+const resending = ref(false)
+const resendMessage = ref('')
+
+async function resendVerification() {
+  resending.value = true
+  resendMessage.value = ''
+  try {
+    await $fetch('/api/auth/resend-verification', { method: 'POST' })
+    resendMessage.value = 'Sent — check the dev inbox.'
+  } catch (e) {
+    resendMessage.value = apiError(e)
+  } finally {
+    resending.value = false
+  }
+}
 </script>
 
 <template>
@@ -101,6 +117,17 @@ async function signOut() {
 
     <main class="main">
       <div class="container">
+        <div v-if="user && !user.emailVerified" class="verify-banner">
+          <div>
+            <strong>Verify your email</strong>
+            <span>We sent a confirmation link to {{ user.email }}.</span>
+            <span v-if="resendMessage" class="verify-msg">{{ resendMessage }}</span>
+          </div>
+          <button class="btn btn-sm" :disabled="resending" @click="resendVerification">
+            {{ resending ? 'Sending…' : 'Resend' }}
+          </button>
+        </div>
+
         <slot />
       </div>
     </main>

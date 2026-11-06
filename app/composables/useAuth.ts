@@ -5,6 +5,7 @@ export type SessionUser = {
   email: string
   name: string
   role: Role
+  emailVerified?: boolean
   memberNo?: string
 }
 

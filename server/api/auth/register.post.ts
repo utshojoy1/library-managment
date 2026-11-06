@@ -40,6 +40,16 @@ export default defineEventHandler(async (event) => {
     })
 
     await createSession(event, user.id)
+
+    // Verification mail must never block sign-up; the outbox keeps a record either way.
+    try {
+      const token = await issueEmailToken(user.id, 'verify_email')
+      const link = `${appBaseUrl(event)}/verify-email?token=${token}`
+      await sendMail({ to: email, ...verifyEmailMessage(name, link) })
+    } catch (mailError) {
+      console.error('[register] verification email failed', mailError)
+    }
+
     return { ...publicUser(user), memberNo: user.memberNo }
   } catch (error) {
     const code = (error as { code?: string; cause?: { code?: string } }).code

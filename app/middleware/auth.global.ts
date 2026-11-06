@@ -10,10 +10,21 @@ export default defineNuxtRouteMiddleware(async (to) => {
     }
   }
 
-  const isPublic = to.path === '/login' || to.path === '/register'
+  const publicPaths = [
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/verify-email',
+    '/dev/mail',
+  ]
 
-  if (isPublic) {
-    if (user.value) return navigateTo('/')
+  if (publicPaths.includes(to.path)) {
+    // Signed-in users get bounced away from login/register, but not from the
+    // password-reset and verification pages (they can be reached from an email).
+    if (user.value && (to.path === '/login' || to.path === '/register')) {
+      return navigateTo('/')
+    }
     return
   }
 

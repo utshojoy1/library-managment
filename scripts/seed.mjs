@@ -40,12 +40,14 @@ const client = new pg.Client({ connectionString })
 
 try {
   await client.connect()
-  await client.query('truncate loans, copies, books, members, sessions, users restart identity cascade')
+  await client.query(
+    'truncate loans, copies, books, members, sessions, email_tokens, emails, users restart identity cascade',
+  )
 
   const userIds = {}
   for (const [name, email, password, role] of USERS) {
     const { rows } = await client.query(
-      'insert into users (name, email, password_hash, role) values ($1, $2, $3, $4) returning id',
+      'insert into users (name, email, password_hash, role, email_verified_at) values ($1, $2, $3, $4, now()) returning id',
       [name, email, hashPassword(password), role],
     )
     userIds[email] = rows[0].id
