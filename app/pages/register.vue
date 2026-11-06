@@ -37,23 +37,23 @@ async function submit() {
     <form @submit.prevent="submit">
       <div class="field">
         <label class="label" for="name">Full name</label>
-        <input id="name" v-model="form.name" class="input" autocomplete="name" required autofocus />
+        <input id="name" v-model="form.name" class="input" name="name" autocomplete="name" required autofocus />
       </div>
 
       <div class="field" style="margin-top: 12px">
         <label class="label" for="email">Email</label>
-        <input id="email" v-model="form.email" class="input" type="email" autocomplete="email" required />
+        <input id="email" v-model="form.email" class="input" type="email" name="email" autocomplete="email" autocapitalize="none" spellcheck="false" required />
       </div>
 
       <div class="field" style="margin-top: 12px">
         <label class="label" for="password">Password</label>
-        <input id="password" v-model="form.password" class="input" type="password" autocomplete="new-password" minlength="8" required />
+        <input id="password" v-model="form.password" class="input" type="password" name="password" autocomplete="new-password" minlength="8" required />
         <small class="field-hint">At least 8 characters.</small>
       </div>
 
       <div class="field" style="margin-top: 12px">
         <label class="label" for="confirm">Confirm password</label>
-        <input id="confirm" v-model="form.confirm" class="input" type="password" autocomplete="new-password" required />
+        <input id="confirm" v-model="form.confirm" class="input" type="password" name="confirmPassword" autocomplete="new-password" required />
       </div>
 
       <button type="submit" class="btn btn-primary auth-submit" :disabled="busy">

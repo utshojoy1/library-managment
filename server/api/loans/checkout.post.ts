@@ -9,8 +9,8 @@ export default defineEventHandler(async (event) => {
   requireRole(event, STAFF)
 
   const body = await readBody(event).catch(() => ({}))
-  const barcode = String(body?.barcode ?? '').trim()
-  const memberNo = String(body?.memberNo ?? '').trim().toUpperCase()
+  const barcode = normalizeCode(body?.barcode)
+  const memberNo = normalizeCode(body?.memberNo)
 
   if (!barcode) throw createError({ statusCode: 400, statusMessage: 'Copy barcode is required' })
   if (!memberNo) throw createError({ statusCode: 400, statusMessage: 'Member number is required' })

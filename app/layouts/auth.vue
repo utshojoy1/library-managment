@@ -1,3 +1,7 @@
+<script setup lang="ts">
+const dev = import.meta.dev
+</script>
+
 <template>
   <div class="auth-shell">
     <div class="auth-panel">
@@ -13,7 +17,13 @@
         <slot />
       </div>
 
-      <p class="auth-foot">Catalog · Members · Circulation</p>
+      <p class="auth-foot">
+        Catalog · Members · Circulation
+        <template v-if="dev">
+          ·
+          <NuxtLink to="/dev/mail" class="link-sm">Dev inbox</NuxtLink>
+        </template>
+      </p>
     </div>
   </div>
 </template>

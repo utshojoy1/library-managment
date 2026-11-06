@@ -15,6 +15,13 @@
       "when": 1793970007400,
       "tag": "0001_white_medusa",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793970637154,
+      "tag": "0002_bitter_aqueduct",
+      "breakpoints": true
     }
   ]
 }

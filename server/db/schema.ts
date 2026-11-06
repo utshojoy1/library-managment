@@ -19,6 +19,7 @@ export const users = pgTable('users', {
   // super_admin | admin | member
   role: text('role').notNull().default('member'),
   isActive: boolean('is_active').notNull().default(true),
+  emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
@@ -30,6 +31,31 @@ export const sessions = pgTable('sessions', {
     .references(() => users.id, { onDelete: 'cascade' }),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+/** Single-use links for email verification and password reset. */
+export const emailTokens = pgTable('email_tokens', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  purpose: text('purpose').notNull(), // verify_email | reset_password
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+/** Outbox: every message is stored, whether or not SMTP delivered it. */
+export const emails = pgTable('emails', {
+  id: serial('id').primaryKey(),
+  to: text('to').notNull(),
+  subject: text('subject').notNull(),
+  text: text('text').notNull(),
+  status: text('status').notNull().default('queued'), // queued | sent | failed
+  error: text('error'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
 })
 
 export const members = pgTable('members', {

@@ -17,11 +17,13 @@
     "vue": "^3.5.45",
     "vue-router": "^4.5.0",
     "drizzle-orm": "^0.45.4",
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "nodemailer": "^7.0.0"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.11",
     "@types/pg": "^8.15.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "@types/nodemailer": "^7.0.0"
   }
 }

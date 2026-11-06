@@ -15,9 +15,16 @@ export type SessionUser = {
   email: string
   name: string
   role: Role
+  emailVerified: boolean
 }
 
-type UserRow = { id: number; email: string; name: string; role: string }
+type UserRow = {
+  id: number
+  email: string
+  name: string
+  role: string
+  emailVerifiedAt: Date | null
+}
 
 /** Password hashes are `scrypt:<salt-hex>:<hash-hex>`. */
 export function hashPassword(password: string): string {
@@ -38,12 +45,22 @@ export function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex')
 }
 
+export function randomToken(): string {
+  return randomBytes(32).toString('base64url')
+}
+
 export function publicUser(user: UserRow): SessionUser {
-  return { id: user.id, email: user.email, name: user.name, role: user.role as Role }
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role as Role,
+    emailVerified: Boolean(user.emailVerifiedAt),
+  }
 }
 
 export async function createSession(event: H3Event, userId: number) {
-  const token = randomBytes(32).toString('base64url')
+  const token = randomToken()
   await db.insert(sessions).values({
     id: sha256(token),
     userId,
