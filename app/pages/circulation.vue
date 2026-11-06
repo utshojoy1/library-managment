@@ -17,11 +17,16 @@ const okIn = ref('')
 const barcodeInput = ref<HTMLInputElement>()
 
 // Covers values that arrive without keystrokes: browser autofill, paste,
-// and scanners that drop the whole code in at once.
-function tidyCodes() {
-  checkout.memberNo = normalizeCode(checkout.memberNo)
-  checkout.barcode = normalizeCode(checkout.barcode)
-  returnForm.barcode = normalizeCode(returnForm.barcode)
+// and scanners that drop the whole code in at once. Reads the DOM so it works
+// even when no `input` event fired for the model to pick up.
+function tidyCode(event: Event) {
+  const el = event.target as HTMLInputElement | null
+  if (!el) return
+  const fixed = normalizeCode(el.value)
+  if (el.value !== fixed) {
+    el.value = fixed
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+  }
 }
 
 onMounted(() => barcodeInput.value?.focus())
@@ -90,7 +95,7 @@ async function giveBack() {
                 class="input code-input"
                 placeholder="M001"
                 @input="checkout.memberNo = normalizeCode(checkout.memberNo)"
-                @change="tidyCodes"
+                @change="tidyCode"
                 required
               />
             </div>
@@ -103,7 +108,7 @@ async function giveBack() {
                 class="input code-input"
                 placeholder="B0001-1"
                 @input="checkout.barcode = normalizeCode(checkout.barcode)"
-                @change="tidyCodes"
+                @change="tidyCode"
                 required
               />
             </div>
@@ -131,7 +136,7 @@ async function giveBack() {
                 class="input code-input"
                 placeholder="B0001-1"
                 @input="returnForm.barcode = normalizeCode(returnForm.barcode)"
-                @change="tidyCodes"
+                @change="tidyCode"
                 required
               />
             </div>

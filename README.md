@@ -156,7 +156,7 @@ scripts/seed.mjs             demo data + demo accounts
 | POST | `/api/auth/reset-password` | public | `{ token, password }` |
 | GET | `/api/dev/outbox` | dev only | Recent messages (404 in production) |
 | GET | `/api/stats` | staff | Dashboard counters |
-| GET | `/api/books?q=` | signed in | Books with total/available copies |
+| GET | `/api/books?q=` | signed in | Books with total/available counts and copy barcodes |
 | POST | `/api/books` | staff | Create title (+ copies, auto barcodes) |
 | GET | `/api/members` | staff | Members with active-loan counts |
 | POST | `/api/members` | staff | Create a member |
