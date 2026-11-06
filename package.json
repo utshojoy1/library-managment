@@ -1,0 +1,27 @@
+{
+  "name": "library-managment",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push --force",
+    "db:seed": "node scripts/seed.mjs",
+    "db:start": "docker start library-db 2>/dev/null || docker run -d --name library-db -e POSTGRES_PASSWORD=library -e POSTGRES_USER=library -e POSTGRES_DB=library -p 5434:5432 postgres:16"
+  },
+  "dependencies": {
+    "nuxt": "^4.6.4",
+    "vue": "^3.5.45",
+    "vue-router": "^4.5.0",
+    "drizzle-orm": "^0.45.4",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.11",
+    "@types/pg": "^8.15.0",
+    "typescript": "^5.9.0"
+  }
+}
