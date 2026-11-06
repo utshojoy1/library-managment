@@ -96,6 +96,7 @@ async function addBook() {
 
     <div class="toolbar">
       <input v-model="search" class="input" type="search" placeholder="Search by title, author, ISBN…" />
+      <span class="toolbar-note">Greyed codes are on loan</span>
     </div>
 
     <div v-if="!filtered.length" class="card">
@@ -118,6 +119,18 @@ async function addBook() {
             :class="book.available > 0 ? 'chip-green' : 'chip-red'"
           >
             {{ book.available }} / {{ book.total }} available
+          </span>
+        </div>
+
+        <div v-if="book.copies?.length" class="copy-codes">
+          <span
+            v-for="copy in book.copies"
+            :key="copy.barcode"
+            class="copy-code"
+            :class="{ taken: copy.status !== 'available' }"
+            :title="copy.status === 'available' ? 'Available' : 'On loan'"
+          >
+            {{ copy.barcode }}
           </span>
         </div>
       </article>
