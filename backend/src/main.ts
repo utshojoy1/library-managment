@@ -18,9 +18,9 @@ import { MiscController } from './misc.controller.js'
 class AppModule {}
 
 const app = await NestFactory.create<NestExpressApplication>(AppModule)
-// The frontend proxies /api/* from the same machine; trust its X-Forwarded-For so
-// rate limits see the real client IP. Set TRUST_PROXY if the proxy runs elsewhere.
-app.set('trust proxy', process.env.TRUST_PROXY ?? 'loopback')
+// The Next.js rewrite doesn't set X-Forwarded-For, so there is no client IP to trust by default.
+// Set TRUST_PROXY (e.g. "loopback") only when a front proxy writes the real client IP into it.
+if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY)
 app.use(cookieParser())
 app.setGlobalPrefix('api')
 

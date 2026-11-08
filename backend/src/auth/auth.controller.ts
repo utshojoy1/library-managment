@@ -16,7 +16,7 @@ import { eq } from 'drizzle-orm'
 import type { Request, Response } from 'express'
 import { db } from '../db.js'
 import { sessions, users } from '../schema.js'
-import { CurrentUser, isUniqueViolation, Public, rateLimit, str, type SessionUser } from '../common.js'
+import { CurrentUser, isUniqueViolation, Public, rateLimit, rateLimitByIp, str, type SessionUser } from '../common.js'
 import { createMember } from '../members.controller.js'
 import { resetPasswordMessage, sendMail, verifyEmailMessage } from '../mail.js'
 import {
@@ -46,7 +46,7 @@ export class AuthController {
     const password = String(body?.password ?? '')
     if (!email || !password) throw new BadRequestException('Email and password are required')
 
-    rateLimit(`login-ip:${req.ip}`, 20, FIFTEEN_MIN)
+    rateLimitByIp(req, 'login-ip', 20, FIFTEEN_MIN)
     rateLimit(`login:${email}`, 10, FIFTEEN_MIN)
 
     const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
@@ -143,7 +143,7 @@ export class AuthController {
   async forgotPassword(@Body() body: Body, @Req() req: Request) {
     const email = str(body?.email).toLowerCase()
     rateLimit(`forgot-password:${email}`, 3, FIFTEEN_MIN)
-    rateLimit(`forgot-password-ip:${req.ip}`, 10, FIFTEEN_MIN)
+    rateLimitByIp(req, 'forgot-password-ip', 10, FIFTEEN_MIN)
 
     if (email) {
       const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
@@ -163,7 +163,7 @@ export class AuthController {
   @Post('reset-password')
   @HttpCode(200)
   async resetPassword(@Body() body: Body, @Req() req: Request) {
-    rateLimit(`reset-password:${req.ip}`, 10, FIFTEEN_MIN)
+    rateLimitByIp(req, 'reset-password-ip', 10, FIFTEEN_MIN)
 
     const password = String(body?.password ?? '')
     if (password.length < 8) throw new BadRequestException('Password must be at least 8 characters')

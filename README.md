@@ -93,7 +93,7 @@ scripts/dev.mjs              runs both apps for `npm run dev` / `npm start`
 | `APP_URL` | `http://localhost:3000` | Base of links in emails — **set this in production** |
 | `PORT` | `4000` | API port |
 | `SMTP_URL`, `MAIL_FROM` | — | Real email delivery; without them mail stays in the outbox |
-| `TRUST_PROXY` | `loopback` | Which proxy's `X-Forwarded-For` to trust for client IPs |
+| `TRUST_PROXY` | unset | Set (e.g. `loopback`) only when a front proxy like nginx writes the client IP into `X-Forwarded-For`; turns on per-IP rate limits |
 
 Frontend: `BACKEND_URL` (default `http://localhost:4000`) — read at build time by the `/api` rewrite.
 
@@ -105,7 +105,7 @@ Frontend: `BACKEND_URL` (default `http://localhost:4000`) — read at build time
 - **Password reset**: 1-hour single-use token, redeemed atomically. Resetting revokes *all* sessions for that account.
 - **Email links** are built from `APP_URL`, never from the request's `Host` header.
 - **No account enumeration**: login says "Invalid email or password"; forgot-password always returns OK.
-- **Rate limits** (in memory, single process): login 20/IP and 10/email per 15 min; 3 verification resends / 10 min; 3 resets per email and 10 per IP / 15 min.
+- **Rate limits** (in memory, single process): login 10/email per 15 min; 3 verification resends / 10 min; 3 reset emails per address / 15 min. With `TRUST_PROXY` set, also per IP: login 20, reset requests 10, reset attempts 10 per 15 min. (The Next.js rewrite doesn't pass the client IP, so per-IP limits stay off without a front proxy — otherwise all users would share one bucket, or spoof their way around it.)
 - **Privileges**: only a super admin changes roles; you cannot demote or disable yourself; the last active super admin is protected (row-locked, race-safe).
 
 ## Data model

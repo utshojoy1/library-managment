@@ -6,7 +6,7 @@ Everything needed to run Libraria locally, from a clean machine.
 
 | Tool | Version | Notes |
 |---|---|---|
-| Node.js | 22 LTS or newer (tested on 24) | `node -v` |
+| Node.js | 22.9 or newer (tested on 24) | `node -v`; scripts use `--env-file-if-exists` |
 | npm | 10+ | workspaces install both apps at once |
 | Docker Desktop | any recent | for the Postgres container |
 | Git | any | |
@@ -134,7 +134,8 @@ NODE_ENV=production npm start      # API :4000 + web :3000
 Before exposing it publicly:
 
 - Set `APP_URL` to the public URL, plus `DATABASE_URL`, `SMTP_URL` and `MAIL_FROM`.
-- Build the frontend with `BACKEND_URL` set if the API isn't on `localhost:4000`; if the API sees requests through another proxy, set `TRUST_PROXY`.
+- Build the frontend with `BACKEND_URL` set if the API isn't on `localhost:4000`.
+- Put a reverse proxy (nginx, Caddy) in front of Next.js that sets the client IP (`proxy_set_header X-Forwarded-For $remote_addr;`), and set `TRUST_PROXY=loopback` on the API. That turns on per-IP rate limits; without it only per-email/per-account limits apply.
 - Change the seeded demo passwords or delete those accounts.
 - Serve over HTTPS — session cookies are `Secure` in production.
 - Run a single API process (the rate limiter is in memory), or move the limiter to shared storage first.

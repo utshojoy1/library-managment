@@ -56,7 +56,7 @@ const ICONS: Record<string, ReactNode> = {
 }
 
 export default function AppLayout({ children }: { children: ReactNode }) {
-  const { user, setUser, isStaff, isSuperAdmin } = useAuth()
+  const { user, isStaff, isSuperAdmin } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
   const [resending, setResending] = useState(false)
@@ -91,8 +91,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   async function signOut() {
     await api('/auth/logout', { method: 'POST' })
-    setUser(null)
-    router.push('/login')
+    // Full reload: clears all client state, and doesn't race this layout's own signed-out redirect.
+    window.location.assign('/login')
   }
 
   async function resendVerification() {

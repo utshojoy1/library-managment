@@ -69,6 +69,15 @@ export function rateLimit(key: string, limit: number, windowMs = 15 * 60 * 1000)
   }
 }
 
+/**
+ * Per-IP limit, applied only when TRUST_PROXY names a front proxy (nginx, Caddy…) that sets
+ * X-Forwarded-For. Behind the Next.js rewrite alone, every request arrives from localhost and
+ * the header is whatever the client sent: an IP bucket would be shared by all users, or spoofed.
+ */
+export function rateLimitByIp(req: Request, key: string, limit: number, windowMs?: number) {
+  if (process.env.TRUST_PROXY && req.ip) rateLimit(`${key}:${req.ip}`, limit, windowMs)
+}
+
 /** Postgres unique-violation, whether drizzle wraps the driver error or not. */
 export function isUniqueViolation(error: unknown): boolean {
   const e = error as { code?: string; cause?: { code?: string } }
