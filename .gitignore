@@ -1,7 +1,7 @@
 node_modules
-.nuxt
-.output
-.data
 dist
+.next
+next-env.d.ts
+*.tsbuildinfo
 .env
 .DS_Store

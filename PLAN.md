@@ -1,7 +1,7 @@
 # Library Management System — Plan
 
-**Stack:** Nuxt 4 · PostgreSQL 16 · Drizzle ORM
-**Status:** v3 shipped — accounts, email verification, password reset (2026-11-06)
+**Stack:** Next.js 16 (frontend) · NestJS 12 (API) · PostgreSQL 16 · Drizzle ORM
+**Status:** v4 — rebuilt on Next.js + NestJS, same features and database (2026-11-09)
 **Repo:** `github.com/utshojoy1/libery-managment`
 
 ---
@@ -43,7 +43,7 @@ A staff + member web app with real accounts, email verification, and self-servic
 | Users & access | `/admin/users` | super admin |
 | Dev inbox | `/dev/mail` | development only |
 
-Stack as built: Nuxt 4.6.4 (Nitro 2.13.6, Vue 3.5.45), PostgreSQL 16.15 in Docker, Drizzle ORM 0.45.4 + drizzle-kit 0.31.11, `pg` 8.23.1, nodemailer 7 (optional), Node 24. Hand-written CSS, no UI framework.
+Stack as built: Next.js 16.4 (React 19.3, App Router) on :3000, NestJS 12.4 (Express) on :4000, PostgreSQL 16 in Docker, Drizzle ORM 0.45.4 + drizzle-kit 0.31.11, `pg` 8.23.1, nodemailer 7 (optional), Node 24, npm workspaces. Hand-written CSS, no UI framework.
 
 ---
 
@@ -62,8 +62,8 @@ Three roles, ordered: `member` < `admin` < `super_admin`.
 
 Enforcement is layered:
 
-1. **Server** — every route calls `requireUser()` or `requireRole()`; this is the real boundary.
-2. **Route middleware** — resolves `/api/auth/me` once per load, redirects anonymous users to `/login?redirect=…`, and enforces `definePageMeta({ roles })`.
+1. **API** — a global NestJS guard denies every route without a session unless it is `@Public()`; `@Roles()` narrows it. This is the real boundary.
+2. **Frontend layout** — resolves `/api/auth/me` once per load, redirects anonymous users to `/login?redirect=…`, and enforces `PAGE_ROLES`.
 3. **UI** — nav items and actions are hidden by role.
 
 Open registration always creates a `member`; only a super admin promotes to `admin` or `super_admin`.
@@ -77,7 +77,7 @@ docker compose up -d db      # or npm run db:start
 npm install
 npm run db:migrate
 npm run db:seed              # prints demo accounts
-npm run dev -- --port 3005   # http://localhost:3005
+npm run dev                  # API :4000 + web http://localhost:3000
 ```
 
 **Demo accounts** (seeded, already verified):
@@ -97,11 +97,11 @@ Mail: without `SMTP_URL` every message lands in the outbox and is visible at `/d
 ## 4. Architecture
 
 ```
-Browser (Nuxt SSR pages)
-    │  httpOnly session cookie
-Nitro middleware  ── resolves session → event.context.user
+Browser
+    │  httpOnly session cookie (first-party)
+Next.js :3000  ── pages; /api/* rewritten to the API
     │
-Nitro routes  ── requireUser / requireRole
+NestJS :4000  ── global AuthGuard (session → req.user, @Public / @Roles)
     ├── Drizzle → PostgreSQL (users, sessions, email_tokens, emails,
     │                        books, copies, members, loans)
     └── sendMail() → SMTP (if configured) + outbox row
@@ -198,7 +198,7 @@ Notes: authors are a text column (no join table yet); loan rules are constants, 
 
 | Rule | Where |
 |---|---|
-| 14-day loan period | `server/api/loans/checkout.post.ts` |
+| 14-day loan period | `backend/src/loans.controller.ts` |
 | Max 5 active loans per member | checkout, same transaction |
 | Member must exist and be active | checkout |
 | Copy must exist and be `available` | checkout, under row lock |
@@ -238,27 +238,23 @@ Notes: authors are a text column (no join table yet); loan rules are constants, 
 ## 10. Project layout
 
 ```
-app/
-  app.vue, layouts/{default,auth}.vue
-  composables/useAuth.ts        session state + role helpers
-  middleware/auth.global.ts     public paths, redirect + page-role guard
-  pages/                        index, catalog, members, circulation,
-                                login, register, forgot-password,
-                                reset-password, verify-email,
-                                admin/users, dev/mail
-  utils/format.ts
-  assets/css/main.css
-server/
-  api/                          auth/, admin/, dev/, books, members, loans/, stats
-  middleware/auth.ts            session → event.context.user
-  utils/auth.ts                 hashing, sessions, requireUser/requireRole
-  utils/tokens.ts               issue/consume single-use tokens
-  utils/mailer.ts               SMTP + outbox, email templates
-  utils/rate-limit.ts           in-memory fixed-window limiter
-  db/{schema,client}.ts
-drizzle/                        migrations
-scripts/seed.mjs
-types/page-meta.d.ts            PageMeta.roles augmentation
+backend/                        NestJS
+  src/main.ts                   module, global guard, /api prefix
+  src/auth/                     controller, guard, hashing/sessions/tokens
+  src/*.controller.ts           books, members, loans, admin, misc (stats, outbox)
+  src/schema.ts, db.ts          Drizzle schema + pool
+  src/mail.ts                   SMTP + outbox, email templates
+  src/common.ts                 roles, decorators, rate limiter
+  drizzle/                      migrations
+  scripts/seed.mjs
+  test/api.test.mjs             node:test against the live API
+frontend/                       Next.js App Router
+  app/(app)/                    sidebar layout + page-role guard; dashboard,
+                                catalog, members, circulation, admin/users
+  app/(auth)/                   login, register, forgot/reset password, verify
+  app/dev/mail/                 dev inbox
+  lib/                          api client, auth context, formatting
+scripts/dev.mjs                 `npm run dev` runs both apps
 ```
 
 ---
@@ -350,6 +346,10 @@ Email verification, password reset, tokens, rate limits, dev inbox, SMTP support
 | 2026-11-06 | Password reset revokes all sessions | Kills a compromised session at reset |
 | 2026-11-06 | Outbox-first mail with optional SMTP | Works offline for dev, one env var for production |
 | 2026-11-06 | Dev inbox 404s in production | Prevents leaking reset links |
+| 2026-11-09 | Rebuild as Next.js frontend + NestJS API | Requested stack; same schema and migrations, so existing data carries over |
+| 2026-11-09 | Next.js proxies `/api/*` to NestJS | Session cookie stays first-party; no CORS |
+| 2026-11-09 | API denies by default (global guard) | A forgotten guard can no longer expose a route |
+| 2026-11-09 | Email links from `APP_URL` | Request Host header can be forged to steal reset tokens |
 
 ### Still open
 
