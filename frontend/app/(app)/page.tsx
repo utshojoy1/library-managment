@@ -1,19 +1,22 @@
-'use client'
-
+import type { Metadata } from 'next'
 import Link from 'next/link'
-import { useApi } from '@/lib/api'
-import { useAuth } from '@/lib/auth'
-import { daysUntil, formatDate, type Loan } from '@/lib/format'
+import { api } from '@/lib/api'
+import { verifySession } from '@/lib/dal'
+import { daysUntil, formatDate } from '@/lib/format'
+import { STAFF, type Loan, type Stats } from '@/lib/types'
 
-type Stats = { books: number; copies: number; members: number; activeLoans: number; overdue: number }
+export const metadata: Metadata = { title: 'Dashboard' }
 
-export default function DashboardPage() {
-  const { user, isStaff: staff } = useAuth()
-  const { data: stats } = useApi<Stats>(staff ? '/stats' : null)
-  const { data: loans } = useApi<Loan[]>(staff ? '/loans?status=active&limit=8' : '/loans/mine')
+export default async function DashboardPage() {
+  const user = await verifySession()
+  const staff = STAFF.includes(user.role)
 
-  const summary = stats ?? { books: 0, copies: 0, members: 0, activeLoans: 0, overdue: 0 }
-  const firstName = user?.name.split(' ')[0] ?? 'there'
+  // Fetched in parallel; members only see their own loans.
+  const [stats, loans] = await Promise.all([
+    staff ? api<Stats>('/stats') : null,
+    api<Loan[]>(staff ? '/loans?status=active&limit=8' : '/loans/mine'),
+  ])
+  const firstName = user.name.split(' ')[0]
 
   return (
     <div>
@@ -33,15 +36,15 @@ export default function DashboardPage() {
         )}
       </header>
 
-      {staff && (
+      {stats && (
         <section className="stats">
-          <div className="stat"><span>Book titles</span><strong>{summary.books}</strong></div>
-          <div className="stat"><span>Physical copies</span><strong>{summary.copies}</strong></div>
-          <div className="stat"><span>Members</span><strong>{summary.members}</strong></div>
+          <div className="stat"><span>Book titles</span><strong>{stats.books}</strong></div>
+          <div className="stat"><span>Physical copies</span><strong>{stats.copies}</strong></div>
+          <div className="stat"><span>Members</span><strong>{stats.members}</strong></div>
           <div className="stat">
             <span>On loan</span>
-            <strong>{summary.activeLoans}</strong>
-            {summary.overdue > 0 && <small className="stat-note">{summary.overdue} overdue</small>}
+            <strong>{stats.activeLoans}</strong>
+            {stats.overdue > 0 && <small className="stat-note">{stats.overdue} overdue</small>}
           </div>
         </section>
       )}
@@ -49,10 +52,10 @@ export default function DashboardPage() {
       <section className="card">
         <div className="card-head">
           <h2>{staff ? 'Active loans' : 'My loans'}</h2>
-          {staff && summary.overdue > 0 && <span className="chip chip-red">{summary.overdue} overdue</span>}
+          {stats && stats.overdue > 0 && <span className="chip chip-red">{stats.overdue} overdue</span>}
         </div>
 
-        {!loans?.length ? (
+        {!loans.length ? (
           <div className="empty">
             {staff ? 'Nothing is out on loan right now.' : 'You have no loans yet — visit the catalog to find something.'}
           </div>

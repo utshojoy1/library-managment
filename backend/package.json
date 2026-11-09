@@ -7,20 +7,25 @@
     "build": "nest build",
     "start": "node dist/main.js",
     "test": "node --env-file-if-exists=.env --test \"test/*.test.mjs\"",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "typeorm": "typeorm -d dist/database/data-source.js",
+    "db:generate": "nest build && npm run typeorm -- migration:generate",
+    "db:migrate": "nest build && npm run typeorm -- migration:run",
+    "db:revert": "nest build && npm run typeorm -- migration:revert",
     "db:seed": "node --env-file-if-exists=.env scripts/seed.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.4.0",
     "@nestjs/core": "^12.4.0",
     "@nestjs/platform-express": "^12.4.0",
+    "@nestjs/typeorm": "^12.0.3",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "cookie-parser": "^1.4.7",
-    "drizzle-orm": "^0.45.4",
     "nodemailer": "^10.4.0",
     "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "typeorm": "^1.1.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^12.0.12",
@@ -29,7 +34,6 @@
     "@types/node": "^24.0.0",
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.15.0",
-    "drizzle-kit": "^0.31.11",
     "typescript": "^5.9.0"
   }
 }

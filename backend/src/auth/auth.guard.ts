@@ -6,8 +6,11 @@ import {
   type ExecutionContext,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
-import { IS_PUBLIC, ROLES_KEY, type AuthedRequest, type Role } from '../common.js'
-import { getSessionUser, SESSION_COOKIE } from './auth.js'
+import type { AuthedRequest } from '../common/decorators/current-user.decorator.js'
+import { IS_PUBLIC } from '../common/decorators/public.decorator.js'
+import { ROLES_KEY } from '../common/decorators/roles.decorator.js'
+import type { Role } from '../common/roles.js'
+import { SESSION_COOKIE, SessionsService } from './sessions.service.js'
 
 /**
  * Global guard: resolves the session cookie on every request, then denies by
@@ -15,11 +18,14 @@ import { getSessionUser, SESSION_COOKIE } from './auth.js'
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly sessions: SessionsService,
+  ) {}
 
   async canActivate(ctx: ExecutionContext) {
     const req = ctx.switchToHttp().getRequest<AuthedRequest>()
-    req.user = (await getSessionUser(req.cookies?.[SESSION_COOKIE])) ?? undefined
+    req.user = (await this.sessions.findUser(req.cookies?.[SESSION_COOKIE])) ?? undefined
 
     const targets = [ctx.getHandler(), ctx.getClass()]
     if (this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, targets)) return true

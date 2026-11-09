@@ -1,74 +1,20 @@
-'use client'
-
+import type { Metadata } from 'next'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import { Suspense, useEffect, useRef, useState } from 'react'
-import { api, errorMessage } from '@/lib/api'
-import { useAuth } from '@/lib/auth'
-import type { SessionUser } from '@/lib/format'
+import { VerifyEmail } from './_components/verify-email'
 
-function Verify() {
-  const token = useSearchParams().get('token') ?? ''
-  const { setUser } = useAuth()
-  const [state, setState] = useState<'verifying' | 'done' | 'error'>('verifying')
-  const [message, setMessage] = useState('')
-  // The token is single-use; React dev mode runs effects twice, so post it only once.
-  const started = useRef(false)
+export const metadata: Metadata = { title: 'Verify your email' }
 
-  useEffect(() => {
-    if (started.current) return
-    started.current = true
+export default async function VerifyEmailPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
+  const { token } = await searchParams
 
-    if (!token) {
-      setState('error')
-      setMessage('This link is missing its token.')
-      return
-    }
-
-    api('/auth/verify-email', { method: 'POST', body: { token } })
-      .then(async () => {
-        setState('done')
-        // Refresh the session so the "verify your email" banner disappears.
-        await api<SessionUser>('/auth/me').then(setUser, () => {})
-      })
-      .catch((e) => {
-        setState('error')
-        setMessage(errorMessage(e))
-      })
-  }, [token, setUser])
-
-  if (state === 'verifying') {
+  if (!token) {
     return (
       <div>
-        <h1>Verifying your email</h1>
-        <p className="sub">One moment…</p>
+        <h1>Link not valid</h1>
+        <p className="sub">This link is missing its token.</p>
+        <Link href="/login" className="btn auth-submit">Back to sign in</Link>
       </div>
     )
   }
-
-  if (state === 'done') {
-    return (
-      <div>
-        <h1>Email verified</h1>
-        <p className="sub">Thanks — your account is confirmed. Overdue reminders and receipts can now reach you.</p>
-        <Link href="/" className="btn btn-primary auth-submit">Go to dashboard</Link>
-      </div>
-    )
-  }
-
-  return (
-    <div>
-      <h1>Link not valid</h1>
-      <p className="sub">{message}</p>
-      <Link href="/login" className="btn auth-submit">Back to sign in</Link>
-    </div>
-  )
-}
-
-export default function VerifyEmailPage() {
-  return (
-    <Suspense>
-      <Verify />
-    </Suspense>
-  )
+  return <VerifyEmail token={token} />
 }

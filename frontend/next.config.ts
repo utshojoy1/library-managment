@@ -1,13 +1,8 @@
 import type { NextConfig } from 'next'
 
-// The browser only ever talks to this app; /api/* is proxied to NestJS so the
-// session cookie stays first-party and no CORS is needed.
-const backend = process.env.BACKEND_URL ?? 'http://localhost:4000'
-
-const config: NextConfig = {
-  async rewrites() {
-    return [{ source: '/api/:path*', destination: `${backend}/api/:path*` }]
-  },
-}
+// The browser only talks to this app. Server Components and Server Actions call the
+// NestJS API (BACKEND_URL, default http://localhost:4000) from the server, forwarding
+// the session cookie, so the cookie stays first-party and no CORS or proxy rewrite is needed.
+const config: NextConfig = {}
 
 export default config

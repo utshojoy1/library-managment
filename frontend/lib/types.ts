@@ -1,0 +1,57 @@
+// Shapes returned by the NestJS API. Shared by server and client components.
+
+export type Role = 'super_admin' | 'admin' | 'member'
+export const STAFF: Role[] = ['admin', 'super_admin']
+
+export type SessionUser = {
+  id: number
+  email: string
+  name: string
+  role: Role
+  emailVerified: boolean
+}
+
+export type Loan = {
+  id: number
+  issuedAt: string
+  dueAt: string
+  returnedAt: string | null
+  status: 'active' | 'returned'
+  barcode: string
+  bookTitle: string
+  author: string
+  memberName?: string
+  memberNo?: string
+}
+
+export type Book = {
+  id: number
+  title: string
+  author: string
+  isbn: string | null
+  category: string | null
+  publishedYear: number | null
+  total: number
+  available: number
+  copies: { barcode: string; status: string }[]
+}
+
+export type Member = {
+  id: number
+  memberNo: string
+  name: string
+  email: string | null
+  phone: string | null
+  joinedAt: string
+  isActive: boolean
+  activeLoans: number
+}
+
+export type Account = { id: number; name: string; email: string; role: Role; isActive: boolean; createdAt: string }
+
+export type Stats = { books: number; copies: number; members: number; activeLoans: number; overdue: number }
+
+export type Mail = { id: number; to: string; subject: string; text: string; status: string; createdAt: string }
+
+/** What a form's Server Action hands back to `useActionState`. */
+export type FormState = { error?: string; ok?: string }

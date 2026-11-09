@@ -1,6 +1,6 @@
 # Libraria — Library Management
 
-A library management web app: **Next.js** frontend, **NestJS** API, **PostgreSQL 16** with Drizzle ORM.
+A library management web app: **Next.js** frontend, **NestJS** API, **PostgreSQL 16** with TypeORM.
 
 Catalog with physical copies, members, issue/return circulation, role-based accounts, email verification and password reset.
 
@@ -43,12 +43,12 @@ The API denies by default: a global NestJS guard requires a session on every rou
 ## Architecture
 
 ```
-Browser ──► Next.js (:3000)  pages, /api/* rewritten ──► NestJS (:4000)  /api
+Browser ──► Next.js (:3000)  Server Components + Server Actions ──► NestJS (:4000)  /api
                                                               │
-                                                              └─► PostgreSQL (Drizzle)
+                                                              └─► PostgreSQL (TypeORM)
 ```
 
-The browser only talks to Next.js, so the httpOnly session cookie is first-party and no CORS is needed.
+The browser only talks to Next.js. Pages render on the Next.js server, which calls the API with the user's session cookie; forms post to Server Actions that do the same. The httpOnly cookie stays first-party, no CORS is needed, and the API is never exposed to the browser.
 
 ## Scripts (run from the repo root)
 
@@ -57,8 +57,9 @@ The browser only talks to Next.js, so the httpOnly session cookie is first-party
 | `npm run dev` | Backend (watch) + frontend (HMR) together; Ctrl+C stops both |
 | `npm run build` / `npm start` | Production build, then run both built apps |
 | `npm test` | API tests against a running, freshly seeded backend |
-| `npm run db:generate` | SQL migration from `backend/src/schema.ts` |
+| `npm run db:generate -- backend/src/database/migrations/<Name>` | Migration from the entity changes |
 | `npm run db:migrate` | Apply pending migrations |
+| `npm run db:revert -w backend` | Undo the last migration |
 | `npm run db:seed` | **Wipe** and load demo data |
 | `npm run db:start` | Start the Docker Postgres |
 
@@ -68,20 +69,28 @@ Each workspace also runs on its own: `npm run dev -w backend`, `npm run dev -w f
 
 ```
 backend/                     NestJS API
-  src/main.ts                app module, global guard, cookie parser, /api prefix
-  src/auth/                  auth.controller (login, register, reset…), auth.guard, auth (hashing, sessions, tokens)
-  src/*.controller.ts        books, members, loans, admin (users), misc (stats, dev outbox)
-  src/schema.ts              Drizzle schema
-  src/mail.ts                SMTP + outbox, email templates
-  src/common.ts              roles, decorators, rate limiter, input helpers
-  drizzle/                   SQL migrations
+  src/main.ts                bootstrap: cookie parser, /api prefix, global ValidationPipe
+  src/app.module.ts          root module: TypeORM connection + feature modules
+  src/<feature>/             one Nest module per feature: *.module, *.controller, *.service, *.entity, dto/
+    auth/                    login, register, email links; sessions + email-token services; global AuthGuard
+    users/                   super-admin user management (/admin/users)
+    members/ books/ loans/   library cards, catalog + copies, checkout/return
+    stats/                   dashboard counts
+    mail/                    SMTP + outbox, email templates, dev outbox
+  src/common/                roles, decorators (@Public, @Roles, @CurrentUser), DTO transforms, rate limiter
+  src/database/              data-source.ts (app + CLI) and migrations/
   scripts/seed.mjs           demo data
   test/api.test.mjs          API tests (node:test)
 frontend/                    Next.js App Router
   app/(app)/                 signed-in pages + sidebar layout (dashboard, catalog, members, circulation, admin/users)
   app/(auth)/                login, register, forgot/reset password, verify email
   app/dev/mail/              dev inbox
-  lib/                       api client, auth context, formatting
+  app/<route>/_components/   client components for that route (forms, search); pages stay Server Components
+  app/<route>/actions.ts     Server Actions for that route's forms
+  lib/api.ts                 server-only API client (forwards the session cookie)
+  lib/dal.ts                 data access layer: getUser, verifySession, requireRole
+  lib/types.ts, format.ts    API types; date and code formatting
+  proxy.ts                   optimistic redirect to /login when there is no session cookie
 scripts/dev.mjs              runs both apps for `npm run dev` / `npm start`
 ```
 
@@ -95,7 +104,7 @@ scripts/dev.mjs              runs both apps for `npm run dev` / `npm start`
 | `SMTP_URL`, `MAIL_FROM` | — | Real email delivery; without them mail stays in the outbox |
 | `TRUST_PROXY` | unset | Set (e.g. `loopback`) only when a front proxy like nginx writes the client IP into `X-Forwarded-For`; turns on per-IP rate limits |
 
-Frontend: `BACKEND_URL` (default `http://localhost:4000`) — read at build time by the `/api` rewrite.
+Frontend: `BACKEND_URL` (default `http://localhost:4000`), the API the Next.js server calls. Read at runtime; never sent to the browser.
 
 ## Auth model
 
@@ -105,7 +114,7 @@ Frontend: `BACKEND_URL` (default `http://localhost:4000`) — read at build time
 - **Password reset**: 1-hour single-use token, redeemed atomically. Resetting revokes *all* sessions for that account.
 - **Email links** are built from `APP_URL`, never from the request's `Host` header.
 - **No account enumeration**: login says "Invalid email or password"; forgot-password always returns OK.
-- **Rate limits** (in memory, single process): login 10/email per 15 min; 3 verification resends / 10 min; 3 reset emails per address / 15 min. With `TRUST_PROXY` set, also per IP: login 20, reset requests 10, reset attempts 10 per 15 min. (The Next.js rewrite doesn't pass the client IP, so per-IP limits stay off without a front proxy — otherwise all users would share one bucket, or spoof their way around it.)
+- **Rate limits** (in memory, single process): login 10/email per 15 min; 3 verification resends / 10 min; 3 reset emails per address / 15 min. With `TRUST_PROXY` set, also per IP: login 20, reset requests 10, reset attempts 10 per 15 min. (Requests reach the API from the Next.js server, which doesn't pass the client IP, so per-IP limits stay off without a front proxy — otherwise all users would share one bucket, or spoof their way around it.)
 - **Privileges**: only a super admin changes roles; you cannot demote or disable yourself; the last active super admin is protected (row-locked, race-safe).
 
 ## Data model

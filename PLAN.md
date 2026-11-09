@@ -1,6 +1,6 @@
 # Library Management System — Plan
 
-**Stack:** Next.js 16 (frontend) · NestJS 12 (API) · PostgreSQL 16 · Drizzle ORM
+**Stack:** Next.js 16 (frontend) · NestJS 12 (API) · PostgreSQL 16 · TypeORM
 **Status:** v4 — rebuilt on Next.js + NestJS, same features and database (2026-11-09)
 **Repo:** `github.com/utshojoy1/libery-managment`
 
@@ -43,7 +43,7 @@ A staff + member web app with real accounts, email verification, and self-servic
 | Users & access | `/admin/users` | super admin |
 | Dev inbox | `/dev/mail` | development only |
 
-Stack as built: Next.js 16.4 (React 19.3, App Router) on :3000, NestJS 12.4 (Express) on :4000, PostgreSQL 16 in Docker, Drizzle ORM 0.45.4 + drizzle-kit 0.31.11, `pg` 8.23.1, nodemailer 7 (optional), Node 24, npm workspaces. Hand-written CSS, no UI framework.
+Stack as built: Next.js 16.4 (React 19.3, App Router) on :3000, NestJS 12.4 (Express) on :4000, PostgreSQL 16 in Docker, TypeORM 1.1 (@nestjs/typeorm), class-validator DTOs, `pg` 8.23.1, nodemailer 7 (optional), Node 24, npm workspaces. Hand-written CSS, no UI framework.
 
 ---
 
@@ -63,7 +63,7 @@ Three roles, ordered: `member` < `admin` < `super_admin`.
 Enforcement is layered:
 
 1. **API** — a global NestJS guard denies every route without a session unless it is `@Public()`; `@Roles()` narrows it. This is the real boundary.
-2. **Frontend layout** — resolves `/api/auth/me` once per load, redirects anonymous users to `/login?redirect=…`, and enforces `PAGE_ROLES`.
+2. **Frontend** — `proxy.ts` sends requests without a session cookie to `/login?redirect=…`; every page then checks the session (and its role) on the server through `lib/dal.ts`, redirecting before anything renders.
 3. **UI** — nav items and actions are hidden by role.
 
 Open registration always creates a `member`; only a super admin promotes to `admin` or `super_admin`.
@@ -99,12 +99,12 @@ Mail: without `SMTP_URL` every message lands in the outbox and is visible at `/d
 ```
 Browser
     │  httpOnly session cookie (first-party)
-Next.js :3000  ── pages; /api/* rewritten to the API
+Next.js :3000  ── Server Components + Server Actions call the API server-side
     │
 NestJS :4000  ── global AuthGuard (session → req.user, @Public / @Roles)
-    ├── Drizzle → PostgreSQL (users, sessions, email_tokens, emails,
+    ├── TypeORM → PostgreSQL (users, sessions, email_tokens, emails,
     │                        books, copies, members, loans)
-    └── sendMail() → SMTP (if configured) + outbox row
+    └── MailService → SMTP (if configured) + outbox row
 ```
 
 One deployable Node app, one database. No queue or background workers yet — mail is sent inline, which is correct at this volume.
@@ -198,7 +198,7 @@ Notes: authors are a text column (no join table yet); loan rules are constants, 
 
 | Rule | Where |
 |---|---|
-| 14-day loan period | `backend/src/loans.controller.ts` |
+| 14-day loan period | `backend/src/loans/loans.service.ts` |
 | Max 5 active loans per member | checkout, same transaction |
 | Member must exist and be active | checkout |
 | Copy must exist and be `available` | checkout, under row lock |
@@ -239,21 +239,20 @@ Notes: authors are a text column (no join table yet); loan rules are constants, 
 
 ```
 backend/                        NestJS
-  src/main.ts                   module, global guard, /api prefix
-  src/auth/                     controller, guard, hashing/sessions/tokens
-  src/*.controller.ts           books, members, loans, admin, misc (stats, outbox)
-  src/schema.ts, db.ts          Drizzle schema + pool
-  src/mail.ts                   SMTP + outbox, email templates
-  src/common.ts                 roles, decorators, rate limiter
-  drizzle/                      migrations
+  src/main.ts, app.module.ts     bootstrap, ValidationPipe, root module
+  src/<feature>/                module + controller + service + entity + dto/ (auth, users, members, books, loans, stats, mail)
+  src/common/                   roles, decorators, DTO transforms, rate limiter
+  src/database/                 data source + TypeORM migrations
   scripts/seed.mjs
   test/api.test.mjs             node:test against the live API
 frontend/                       Next.js App Router
-  app/(app)/                    sidebar layout + page-role guard; dashboard,
+  app/(app)/                    sidebar layout; dashboard,
                                 catalog, members, circulation, admin/users
   app/(auth)/                   login, register, forgot/reset password, verify
   app/dev/mail/                 dev inbox
-  lib/                          api client, auth context, formatting
+  app/<route>/_components, actions.ts   client forms, Server Actions
+  lib/                          server-only API client, DAL (verifySession), types
+  proxy.ts                      redirect when there is no session cookie
 scripts/dev.mjs                 `npm run dev` runs both apps
 ```
 
@@ -350,6 +349,8 @@ Email verification, password reset, tokens, rate limits, dev inbox, SMTP support
 | 2026-11-09 | Next.js proxies `/api/*` to NestJS | Session cookie stays first-party; no CORS |
 | 2026-11-09 | API denies by default (global guard) | A forgotten guard can no longer expose a route |
 | 2026-11-09 | Email links from `APP_URL` | Request Host header can be forged to steal reset tokens |
+| 2026-11-09 | Backend reorganized into Nest feature modules on TypeORM | Follows the NestJS docs; entities match the Drizzle schema exactly, so existing databases carry over |
+| 2026-11-09 | Frontend is server-first: Server Components, Server Actions, proxy.ts, DAL | Follows the Next.js docs; no blank screen while the session loads, and the API is called only from the server |
 
 ### Still open
 

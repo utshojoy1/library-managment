@@ -1,26 +1,4 @@
-export type Role = 'super_admin' | 'admin' | 'member'
-
-export type SessionUser = {
-  id: number
-  email: string
-  name: string
-  role: Role
-  emailVerified?: boolean
-  memberNo?: string
-}
-
-export type Loan = {
-  id: number
-  issuedAt: string
-  dueAt: string
-  returnedAt: string | null
-  status: 'active' | 'returned'
-  barcode: string
-  bookTitle: string
-  author: string
-  memberName?: string
-  memberNo?: string
-}
+import type { Role } from './types'
 
 export const ROLE_LABELS: Record<Role, string> = {
   super_admin: 'Super admin',

@@ -37,12 +37,12 @@ If a container named `library-db` already exists, reuse it with `docker start li
 cp backend/.env.example backend/.env
 ```
 
-The defaults match the Compose database. The API, drizzle-kit and the seed script all read `backend/.env`. The frontend needs no env file locally.
+The defaults match the Compose database. The API, the TypeORM CLI and the seed script all read `backend/.env`. The frontend needs no env file locally.
 
 ## 5. Create tables and demo data
 
 ```bash
-npm run db:migrate    # applies backend/drizzle/*.sql
+npm run db:migrate    # builds the API, then applies backend/src/database/migrations/*
 npm run db:seed       # truncates and reloads demo data
 ```
 
@@ -80,21 +80,22 @@ npm test                           # terminal 2
 
 ## 9. Changing the database schema
 
-`backend/src/schema.ts` is the source of truth.
+The entities (`backend/src/<feature>/*.entity.ts`) describe the schema; migrations change it. `synchronize` is off, so the database only changes through migrations.
 
 ```bash
-# 1. edit backend/src/schema.ts
-npm run db:generate     # writes backend/drizzle/000N_*.sql (+ snapshot)
-npm run db:migrate      # applies it
+# 1. edit an entity (or add one: a new *.entity.ts is picked up automatically)
+npm run db:generate -- backend/src/database/migrations/AddFines   # diff entities vs the DB
+npm run db:migrate                                                  # applies it
 ```
 
-- Never edit an applied migration — add a new one.
-- Commit both the `.sql` and `drizzle/meta/*` files.
+- Read the generated migration before applying it.
+- Never edit an applied migration — add a new one. `npm run db:revert -w backend` undoes the last one.
+- `Baseline` recreates the schema the earlier Drizzle migrations built; on a database that already has it, it only records itself.
 - Update `backend/scripts/seed.mjs` when demo data should fill new columns.
 
 ## 10. Adding things
 
-**API route** — add a method to a controller in `backend/src/` (or a new controller, registered in `main.ts`). Routes need a session by default:
+**API route** — add a method to a feature's controller and put the logic in its service. A new feature gets its own folder (`backend/src/fines/`: `fines.module.ts`, `.controller.ts`, `.service.ts`, `.entity.ts`, `dto/`), and its module is imported in `app.module.ts`. Routes need a session by default:
 
 ```ts
 @Controller('fines')
@@ -110,9 +111,18 @@ export class FinesController {
 }
 ```
 
-Use `str()` / `normalizeCode()` from `common.ts` on body fields and throw Nest exceptions (`BadRequestException`, …) for errors.
+Type request bodies and query strings as DTO classes with `class-validator` rules; the global `ValidationPipe` rejects anything else with a 400 and strips unknown fields. `common/transforms.ts` has `@Trim()`, `@ToLowerCase()`, `@ToUpperCase()` (barcodes, member numbers) and `@ToOptionalNumber()` (HTML number inputs). Services throw Nest exceptions (`NotFoundException`, `ConflictException`, …) for errors, and inject repositories with `@InjectRepository(Entity)` after the module lists the entity in `TypeOrmModule.forFeature([...])`.
 
-**Page** — `frontend/app/(app)/foo/page.tsx` becomes `/foo` inside the sidebar layout. To restrict it by role, add it to `PAGE_ROLES` in `frontend/app/(app)/layout.tsx` (and guard the API, which is the real boundary). Fetch with `useApi('/path')`, write with `api('/path', { method, body })`.
+**Page** — `frontend/app/(app)/foo/page.tsx` becomes `/foo` inside the sidebar layout. Pages are Server Components: start with `await verifySession()` (any signed-in user) or `await requireRole(STAFF)` from `@/lib/dal`, then load data with `await api<T>('/path')` from `@/lib/api`. Guard the API too; it is the real boundary.
+
+```
+app/(app)/fines/
+  page.tsx                  server: requireRole, api('/fines'), render
+  actions.ts                'use server': forward the form to the API, revalidatePath('/fines')
+  _components/fine-form.tsx 'use client': useActionState(action, {}) for pending + error state
+```
+
+Server Actions return `{ error }` for API refusals (`formError(e)`) and call `revalidatePath` so the page re-renders with fresh data. Keep form inputs controlled: React resets uncontrolled fields after an action, which would wipe a form that just failed validation. Only client components that need state or events get `'use client'`; pass them server data as props. A new public page (no sign-in) must also be added to `PUBLIC_PATHS` in `frontend/proxy.ts`.
 
 ## 11. Common problems
 
@@ -134,7 +144,7 @@ NODE_ENV=production npm start      # API :4000 + web :3000
 Before exposing it publicly:
 
 - Set `APP_URL` to the public URL, plus `DATABASE_URL`, `SMTP_URL` and `MAIL_FROM`.
-- Build the frontend with `BACKEND_URL` set if the API isn't on `localhost:4000`.
+- Set `BACKEND_URL` on the frontend server if the API isn't on `localhost:4000`. It is read at runtime, server-side only.
 - Put a reverse proxy (nginx, Caddy) in front of Next.js that sets the client IP (`proxy_set_header X-Forwarded-For $remote_addr;`), and set `TRUST_PROXY=loopback` on the API. That turns on per-IP rate limits; without it only per-email/per-account limits apply.
 - Change the seeded demo passwords or delete those accounts.
 - Serve over HTTPS — session cookies are `Secure` in production.
