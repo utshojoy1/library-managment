@@ -245,12 +245,13 @@ backend/                        NestJS
   src/database/                 data source + TypeORM migrations
   scripts/seed.mjs
   test/api.test.mjs             node:test against the live API
-frontend/                       Next.js App Router
-  app/(app)/                    sidebar layout; dashboard,
+frontend/src/                   Next.js App Router (config stays in frontend/)
+  app/(dashboard)/              sidebar layout; dashboard,
                                 catalog, members, circulation, admin/users
   app/(auth)/                   login, register, forgot/reset password, verify
   app/dev/mail/                 dev inbox
-  app/<route>/_components, actions.ts   client forms, Server Actions
+  components/<feature>/         client components
+  actions/                      Server Actions per domain
   lib/                          server-only API client, DAL (verifySession), types
   proxy.ts                      redirect when there is no session cookie
 scripts/dev.mjs                 `npm run dev` runs both apps

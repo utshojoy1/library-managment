@@ -81,16 +81,17 @@ backend/                     NestJS API
   src/database/              data-source.ts (app + CLI) and migrations/
   scripts/seed.mjs           demo data
   test/api.test.mjs          API tests (node:test)
-frontend/                    Next.js App Router
-  app/(app)/                 signed-in pages + sidebar layout (dashboard, catalog, members, circulation, admin/users)
-  app/(auth)/                login, register, forgot/reset password, verify email
-  app/dev/mail/              dev inbox
-  app/<route>/_components/   client components for that route (forms, search); pages stay Server Components
-  app/<route>/actions.ts     Server Actions for that route's forms
-  lib/api.ts                 server-only API client (forwards the session cookie)
-  lib/dal.ts                 data access layer: getUser, verifySession, requireRole
-  lib/types.ts, format.ts    API types; date and code formatting
-  proxy.ts                   optimistic redirect to /login when there is no session cookie
+frontend/                    Next.js App Router; config files at the root, code in src/
+  src/app/                   routing only: layout, page, error and not-found files
+    (dashboard)/             signed-in pages + sidebar layout (dashboard, catalog, members, circulation, admin/users)
+    (auth)/                  sign-in card layout: login, register, forgot/reset password, verify email
+    dev/mail/                dev inbox
+  src/components/<feature>/  client components (forms, search, sidebar links); pages stay Server Components
+  src/actions/<domain>.ts    Server Actions: auth, session, books, members, loans, users
+  src/lib/api.ts             server-only API client (forwards the session cookie)
+  src/lib/dal.ts             data access layer: getUser, verifySession, requireRole
+  src/lib/types.ts, format.ts  API types; date and code formatting
+  src/proxy.ts               optimistic redirect to /login when there is no session cookie
 scripts/dev.mjs              runs both apps for `npm run dev` / `npm start`
 ```
 

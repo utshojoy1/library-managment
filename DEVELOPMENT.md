@@ -113,16 +113,15 @@ export class FinesController {
 
 Type request bodies and query strings as DTO classes with `class-validator` rules; the global `ValidationPipe` rejects anything else with a 400 and strips unknown fields. `common/transforms.ts` has `@Trim()`, `@ToLowerCase()`, `@ToUpperCase()` (barcodes, member numbers) and `@ToOptionalNumber()` (HTML number inputs). Services throw Nest exceptions (`NotFoundException`, `ConflictException`, …) for errors, and inject repositories with `@InjectRepository(Entity)` after the module lists the entity in `TypeOrmModule.forFeature([...])`.
 
-**Page** — `frontend/app/(app)/foo/page.tsx` becomes `/foo` inside the sidebar layout. Pages are Server Components: start with `await verifySession()` (any signed-in user) or `await requireRole(STAFF)` from `@/lib/dal`, then load data with `await api<T>('/path')` from `@/lib/api`. Guard the API too; it is the real boundary.
+**Page** — `frontend/src/app/(dashboard)/foo/page.tsx` becomes `/foo` inside the sidebar layout (route groups in parentheses never appear in the URL). The frontend follows the "project files outside of `app`" strategy from the Next.js project-structure guide: `src/app/` holds only routing files, and everything else lives in `src/components`, `src/actions` and `src/lib`. Pages are Server Components: start with `await verifySession()` (any signed-in user) or `await requireRole(STAFF)` from `@/lib/dal`, then load data with `await api<T>('/path')` from `@/lib/api`. Guard the API too; it is the real boundary.
 
 ```
-app/(app)/fines/
-  page.tsx                  server: requireRole, api('/fines'), render
-  actions.ts                'use server': forward the form to the API, revalidatePath('/fines')
-  _components/fine-form.tsx 'use client': useActionState(action, {}) for pending + error state
+src/app/(dashboard)/fines/page.tsx  server: requireRole, api('/fines'), render
+src/actions/fines.ts                'use server': forward the form to the API, revalidatePath('/fines')
+src/components/fines/fine-form.tsx  'use client': useActionState(action, {}) for pending + error state
 ```
 
-Server Actions return `{ error }` for API refusals (`formError(e)`) and call `revalidatePath` so the page re-renders with fresh data. Keep form inputs controlled: React resets uncontrolled fields after an action, which would wipe a form that just failed validation. Only client components that need state or events get `'use client'`; pass them server data as props. A new public page (no sign-in) must also be added to `PUBLIC_PATHS` in `frontend/proxy.ts`.
+Server Actions return `{ error }` for API refusals (`formError(e)`) and call `revalidatePath` so the page re-renders with fresh data. Keep form inputs controlled: React resets uncontrolled fields after an action, which would wipe a form that just failed validation. Only client components that need state or events get `'use client'`; pass them server data as props. A new public page (no sign-in) must also be added to `PUBLIC_PATHS` in `frontend/src/proxy.ts`.
 
 ## 11. Common problems
 
