@@ -696,6 +696,21 @@ a {
   height: 16px;
 }
 
+/* Password field with a show/hide button inside it. */
+.input-reveal {
+  position: relative;
+}
+
+.input-reveal .input {
+  padding-right: 38px;
+}
+
+.input-reveal .icon-btn {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+}
+
 .input-sm {
   height: 32px;
   font-size: 13px;

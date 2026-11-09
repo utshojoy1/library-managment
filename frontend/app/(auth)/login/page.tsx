@@ -13,6 +13,7 @@ function LoginForm() {
   const { setUser } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -70,16 +71,32 @@ function LoginForm() {
             <label className="label" htmlFor="password">Password</label>
             <Link href="/forgot-password" className="link-sm">Forgot password?</Link>
           </div>
-          <input
-            id="password"
-            className="input"
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <div className="input-reveal">
+            <input
+              id="password"
+              className="input"
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-pressed={showPassword}
+              title={showPassword ? 'Hide password' : 'Show password'}
+              onClick={() => setShowPassword((v) => !v)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+                <circle cx="12" cy="12" r="3" />
+                {showPassword && <path d="M3 3l18 18" />}
+              </svg>
+            </button>
+          </div>
         </div>
 
         <button type="submit" className="btn btn-primary auth-submit" disabled={busy}>
