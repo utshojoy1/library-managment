@@ -9,7 +9,13 @@ const script = process.argv[2] ?? 'dev'
 function stop(child) {
   if (child.exitCode !== null) return
   if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' })
-  else process.kill(-child.pid, 'SIGTERM')
+  else {
+    try {
+      process.kill(-child.pid, 'SIGTERM')
+    } catch {
+      // ESRCH: the group already exited (both servers can die at once).
+    }
+  }
 }
 
 const children = ['backend', 'frontend'].map((name) => {
