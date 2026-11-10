@@ -2,33 +2,33 @@ import type { Metadata } from 'next'
 import { api } from '@/lib/api'
 import { requireRole } from '@/lib/dal'
 import { daysUntil, formatDate } from '@/lib/format'
-import { STAFF, type Loan } from '@/lib/types'
+import { STAFF, type Loan, type Member } from '@/lib/types'
 import { CheckoutForm, ReturnForm } from '@/components/circulation/circulation-forms'
 
 export const metadata: Metadata = { title: 'Circulation' }
 
 export default async function CirculationPage() {
   await requireRole(STAFF)
-  const loans = await api<Loan[]>('/loans?limit=10')
+  const [loans, members] = await Promise.all([api<Loan[]>('/loans?limit=10'), api<Member[]>('/members')])
 
   return (
     <div>
       <header className="page-head">
         <div>
           <h1>Circulation</h1>
-          <p>Scan or type a barcode to issue or return a copy.</p>
+          <p>Pick a member, scan a copy and set the due date to issue it; scan a copy to return it.</p>
         </div>
       </header>
 
       <div className="split">
-        <CheckoutForm />
+        <CheckoutForm members={members} />
         <ReturnForm />
       </div>
 
       <section className="card">
         <div className="card-head"><h2>Recent activity</h2></div>
         {!loans.length ? (
-          <div className="empty">No loans recorded yet.</div>
+          <div className="empty">No borrows recorded yet.</div>
         ) : (
           <table className="table">
             <thead>
@@ -53,7 +53,7 @@ export default async function CirculationPage() {
                     ) : daysUntil(loan.dueAt) < 0 ? (
                       <span className="chip chip-red">Overdue</span>
                     ) : (
-                      <span className="chip chip-green">On loan</span>
+                      <span className="chip chip-green">Borrowed</span>
                     )}
                   </td>
                 </tr>

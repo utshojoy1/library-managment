@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common'
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm'
 import { DataSource, Repository } from 'typeorm'
+import { isForeignKeyViolation } from '../common/db-errors.js'
 import { Book } from '../entities/book.entity.js'
 import { Copy } from '../entities/copy.entity.js'
 import type { CreateBookDto } from './dto/create-book.dto.js'
+import type { UpdateBookDto } from './dto/update-book.dto.js'
 
 @Injectable()
 export class BooksService {
@@ -13,7 +15,50 @@ export class BooksService {
   ) {}
 
   findAll(q?: string) {
-    const query = this.books
+    const query = this.bookRows().orderBy('b.createdAt', 'DESC')
+
+    // `?q=a&q=b` arrives as an array; treat anything but a string as no search.
+    const search = typeof q === 'string' ? q.trim() : ''
+    if (search) {
+      query.where('b.title ILIKE :s OR b.author ILIKE :s OR b.isbn ILIKE :s', { s: `%${search}%` })
+    }
+    return query.getRawMany()
+  }
+
+  async findOne(id: number) {
+    const book = await this.bookRows().where('b.id = :id', { id }).getRawOne()
+    if (!book) throw new NotFoundException('Book not found')
+    return book
+  }
+
+  async update(id: number, dto: UpdateBookDto) {
+    const result = await this.books.update(id, {
+      title: dto.title,
+      author: dto.author,
+      isbn: dto.isbn || null,
+      category: dto.category || null,
+      publishedYear: dto.publishedYear ?? null,
+    })
+    if (!result.affected) throw new NotFoundException('Book not found')
+    return this.findOne(id)
+  }
+
+  async remove(id: number) {
+    try {
+      // Copies cascade; loans don't, so the database itself refuses a book with any loan history.
+      const result = await this.books.delete(id)
+      if (!result.affected) throw new NotFoundException('Book not found')
+    } catch (error) {
+      if (isForeignKeyViolation(error)) {
+        throw new ConflictException('This book has borrow history, so it can’t be deleted — its history must be kept')
+      }
+      throw error
+    }
+  }
+
+  /** Books with copy counts and barcodes; one row per book. */
+  private bookRows() {
+    return this.books
       .createQueryBuilder('b')
       .leftJoin(Copy, 'c', 'c.bookId = b.id')
       .select('b.id', 'id')
@@ -34,14 +79,6 @@ export class BooksService {
         'copies',
       )
       .groupBy('b.id')
-      .orderBy('b.createdAt', 'DESC')
-
-    // `?q=a&q=b` arrives as an array; treat anything but a string as no search.
-    const search = typeof q === 'string' ? q.trim() : ''
-    if (search) {
-      query.where('b.title ILIKE :s OR b.author ILIKE :s OR b.isbn ILIKE :s', { s: `%${search}%` })
-    }
-    return query.getRawMany()
   }
 
   async create(dto: CreateBookDto) {

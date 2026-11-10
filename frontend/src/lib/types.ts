@@ -49,9 +49,25 @@ export type Member = {
 
 export type Account = { id: number; name: string; email: string; role: Role; isActive: boolean; createdAt: string }
 
-export type Stats = { books: number; copies: number; members: number; activeLoans: number; overdue: number }
+export type Stats = {
+  books: number
+  copies: number
+  members: number
+  activeLoans: number
+  overdue: number
+  dueSoon: number
+  categories: { name: string; count: number }[]
+}
 
 export type Mail = { id: number; to: string; subject: string; text: string; status: string; createdAt: string }
 
 /** What a form's Server Action hands back to `useActionState`. */
 export type FormState = { error?: string; ok?: string }
+
+export type Activity = {
+  type: 'book_added' | 'member_joined' | 'issued' | 'returned'
+  at: string
+  subject: string
+  detail: string | null
+  bookId: number | null
+}

@@ -21,6 +21,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       ? ([
           { to: '/dashboard/members', label: 'Members', icon: 'users' },
           { to: '/dashboard/circulation', label: 'Circulation', icon: 'swap' },
+          { to: '/dashboard/activity', label: 'Activity', icon: 'activity' },
         ] satisfies NavItem[])
       : []),
     ...(user.role === 'super_admin' ? ([{ to: '/dashboard/admin/users', label: 'Users', icon: 'shield' }] satisfies NavItem[]) : []),

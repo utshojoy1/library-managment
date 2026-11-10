@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm'
 import { randomUUID } from 'node:crypto'
 import { DataSource, type EntityManager, Repository } from 'typeorm'
@@ -34,6 +34,12 @@ export class MembersService {
     return this.dataSource.transaction((manager) =>
       this.insert(manager, { name: dto.name, email: dto.email || null, phone: dto.phone || null }),
     )
+  }
+
+  async update(id: number, values: Partial<Pick<Member, 'name' | 'email' | 'phone' | 'isActive'>>) {
+    const result = await this.members.update(id, values)
+    if (!result.affected) throw new NotFoundException('Member not found')
+    return this.members.findOneByOrFail({ id })
   }
 
   /**

@@ -18,7 +18,7 @@ export function RegisterForm() {
   return (
     <div>
       <h1>Create an account</h1>
-      <p className="sub">Membership accounts can browse the catalog and track their loans.</p>
+      <p className="sub">Membership accounts can browse the catalog and track what they borrow.</p>
 
       {state.error && <div className="banner banner-error">{state.error}</div>}
 

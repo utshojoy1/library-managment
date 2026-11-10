@@ -12,4 +12,10 @@ export class ListLoansQueryDto {
   @Min(1, { message: 'Limit must be between 1 and 200' })
   @Max(200, { message: 'Limit must be between 1 and 200' })
   limit?: number
+
+  @ToOptionalNumber()
+  @IsOptional()
+  @IsInt({ message: 'Book id must be a whole number' })
+  @Min(1, { message: 'Book id must be a whole number' })
+  bookId?: number
 }

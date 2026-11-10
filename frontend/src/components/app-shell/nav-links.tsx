@@ -43,6 +43,7 @@ const ICONS = {
       <path d="M9 12l2 2 4-4" />
     </>
   ),
+  activity: <path d="M22 12h-4l-3 9L9 3l-3 9H2" />,
 } satisfies Record<string, ReactNode>
 
 /** Client only for the active-link highlight; the list itself comes from the server layout. */

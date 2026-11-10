@@ -9,5 +9,5 @@ export const metadata: Metadata = { title: 'Catalog' }
 export default async function CatalogPage() {
   const user = await verifySession()
   const books = await api<Book[]>('/books')
-  return <CatalogView books={books} canAdd={STAFF.includes(user.role)} />
+  return <CatalogView books={books} canEdit={STAFF.includes(user.role)} />
 }

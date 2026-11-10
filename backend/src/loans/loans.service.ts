@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm'
 import { DataSource, Repository } from 'typeorm'
 import { Book } from '../entities/book.entity.js'
@@ -11,6 +11,21 @@ import { Loan } from '../entities/loan.entity.js'
 const LOAN_DAYS = 14
 const MAX_ACTIVE_LOANS = 5
 const DAY_MS = 86_400_000
+const MAX_LOAN_DAYS = 90
+
+/** End of the chosen day (server time), so a book due "on the 20th" is not overdue during the 20th. */
+function customDueAt(date: string) {
+  const dueAt = new Date(`${date}T23:59:59`)
+  // JS rolls impossible dates over (Feb 31 → Mar 3), so check the day survived.
+  if (Number.isNaN(dueAt.getTime()) || dueAt.getDate() !== Number(date.slice(8))) {
+    throw new BadRequestException('Due date is not a valid date')
+  }
+  if (dueAt.getTime() <= Date.now()) throw new BadRequestException('Due date must be today or later')
+  if (dueAt.getTime() > Date.now() + MAX_LOAN_DAYS * DAY_MS) {
+    throw new BadRequestException(`Due date can be at most ${MAX_LOAN_DAYS} days away`)
+  }
+  return dueAt
+}
 
 @Injectable()
 export class LoansService {
@@ -37,13 +52,14 @@ export class LoansService {
       .orderBy('l.issuedAt', 'DESC')
   }
 
-  findAll({ status, limit = 50 }: ListLoansQueryDto) {
+  findAll({ status, bookId, limit = 50 }: ListLoansQueryDto) {
     const query = this.loanRows()
       .innerJoin('l.member', 'm')
       .addSelect('m.name', 'memberName')
       .addSelect('m.memberNo', 'memberNo')
       .limit(limit)
-    if (status) query.where('l.status = :status', { status })
+    if (status) query.andWhere('l.status = :status', { status })
+    if (bookId) query.andWhere('c.bookId = :bookId', { bookId })
     return query.getRawMany()
   }
 
@@ -54,7 +70,8 @@ export class LoansService {
     return this.loanRows().where('l.memberId = :memberId', { memberId: member.id }).limit(50).getRawMany()
   }
 
-  checkout({ barcode, memberNo }: CheckoutDto) {
+  checkout({ barcode, memberNo, dueDate }: CheckoutDto) {
+    const dueAt = dueDate ? customDueAt(dueDate) : new Date(Date.now() + LOAN_DAYS * DAY_MS)
     return this.dataSource.transaction(async (manager) => {
       // Lock the member too, so two desks can't push them past the loan limit.
       const member = await manager
@@ -74,16 +91,16 @@ export class LoansService {
         .getOne()
       if (!copy) throw new NotFoundException(`No copy found with barcode ${barcode}`)
       if (copy.status !== 'available') {
-        throw new ConflictException(`Copy ${barcode} is currently ${copy.status.replace('_', ' ')}`)
+        throw new ConflictException(`Copy ${barcode} is already borrowed`)
       }
 
       const count = await manager.countBy(Loan, { memberId: member.id, status: 'active' })
       if (count >= MAX_ACTIVE_LOANS) {
-        throw new ConflictException(`${member.name} already has ${count} books on loan (limit ${MAX_ACTIVE_LOANS})`)
+        throw new ConflictException(`${member.name} already has ${count} books borrowed (limit ${MAX_ACTIVE_LOANS})`)
       }
 
       const loan = await manager.save(
-        manager.create(Loan, { copyId: copy.id, memberId: member.id, dueAt: new Date(Date.now() + LOAN_DAYS * DAY_MS) }),
+        manager.create(Loan, { copyId: copy.id, memberId: member.id, dueAt }),
       )
       await manager.update(Copy, copy.id, { status: 'on_loan' })
 
@@ -101,7 +118,7 @@ export class LoansService {
       if (!copy) throw new NotFoundException(`No copy found with barcode ${barcode}`)
 
       const loan = await manager.findOneBy(Loan, { copyId: copy.id, status: 'active' })
-      if (!loan) throw new ConflictException(`Copy ${barcode} is not on loan`)
+      if (!loan) throw new ConflictException(`Copy ${barcode} is not borrowed`)
 
       const book = await manager.findOneBy(Book, { id: copy.bookId })
 

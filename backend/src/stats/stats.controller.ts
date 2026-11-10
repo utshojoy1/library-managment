@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common'
+import { Controller, DefaultValuePipe, Get, ParseIntPipe, Query } from '@nestjs/common'
 import { Roles } from '../common/decorators/roles.decorator.js'
 import { STAFF } from '../common/roles.js'
 import { StatsService } from './stats.service.js'
@@ -11,5 +11,10 @@ export class StatsController {
   @Get()
   summary() {
     return this.stats.summary()
+  }
+
+  @Get('activity')
+  activity(@Query('limit', new DefaultValuePipe(12), ParseIntPipe) limit: number) {
+    return this.stats.activity(Math.min(Math.max(limit, 1), 200))
   }
 }

@@ -12,12 +12,12 @@ export async function checkout(_prev: FormState, form: FormData): Promise<FormSt
   try {
     res = await api('/loans/checkout', {
       method: 'POST',
-      body: { memberNo: form.get('memberNo'), barcode: form.get('barcode') },
+      body: { memberNo: form.get('memberNo'), barcode: form.get('barcode'), dueDate: form.get('dueDate') || undefined },
     })
   } catch (error) {
     return formError(error)
   }
-  revalidatePath('/dashboard/circulation')
+  revalidatePath('/dashboard', 'layout') // every dashboard page + the sidebar activity feed
   return { ok: `Issued “${res.bookTitle}” to ${res.memberName} — due ${formatDate(res.dueAt)}.` }
 }
 
@@ -28,7 +28,7 @@ export async function returnCopy(_prev: FormState, form: FormData): Promise<Form
   } catch (error) {
     return formError(error)
   }
-  revalidatePath('/dashboard/circulation')
+  revalidatePath('/dashboard', 'layout') // every dashboard page + the sidebar activity feed
   return {
     ok: res.daysLate
       ? `Returned “${res.bookTitle}” — ${res.daysLate} day(s) late.`
