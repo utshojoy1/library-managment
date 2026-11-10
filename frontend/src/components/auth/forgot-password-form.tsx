@@ -34,12 +34,12 @@ export function ForgotPasswordForm() {
           <p className="sub">
             If an account exists for <strong>{email}</strong>, a reset link is on its way. It expires in one hour.
           </p>
-          <Link href="/login" className="btn auth-submit">Back to sign in</Link>
+          <Link href="/auth/login" className="btn auth-submit">Back to sign in</Link>
         </>
       )}
 
       <p className="auth-switch">
-        <Link href="/login">Back to sign in</Link>
+        <Link href="/auth/login">Back to sign in</Link>
       </p>
     </div>
   )

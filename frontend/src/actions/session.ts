@@ -9,7 +9,7 @@ export async function signOut() {
   // Best effort: the API forgets the session; the cookie is cleared either way.
   await apiResponse('/auth/logout', { method: 'POST' }).catch(() => {})
   ;(await cookies()).delete(SESSION_COOKIE)
-  redirect('/login')
+  redirect('/auth/login')
 }
 
 export async function resendVerification(): Promise<FormState> {

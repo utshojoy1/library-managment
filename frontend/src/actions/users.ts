@@ -13,6 +13,6 @@ export async function updateUser(id: number, patch: { role?: Role; isActive?: bo
     return formError(error)
   } finally {
     // Refresh either way, so a rejected change snaps back to the stored value.
-    revalidatePath('/admin/users')
+    revalidatePath('/dashboard/admin/users')
   }
 }

@@ -34,7 +34,7 @@ export function VerifyEmail({ token }: { token: string }) {
       <div>
         <h1>Email verified</h1>
         <p className="sub">Thanks — your account is confirmed. Overdue reminders and receipts can now reach you.</p>
-        <Link href="/" className="btn btn-primary auth-submit">Go to dashboard</Link>
+        <Link href="/dashboard" className="btn btn-primary auth-submit">Go to dashboard</Link>
       </div>
     )
   }
@@ -43,7 +43,7 @@ export function VerifyEmail({ token }: { token: string }) {
     <div>
       <h1>Link not valid</h1>
       <p className="sub">{result.error}</p>
-      <Link href="/login" className="btn auth-submit">Back to sign in</Link>
+      <Link href="/auth/login" className="btn auth-submit">Back to sign in</Link>
     </div>
   )
 }

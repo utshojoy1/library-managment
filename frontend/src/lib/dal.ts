@@ -20,13 +20,13 @@ export const getUser = cache(async (): Promise<SessionUser | null> => {
 /** The signed-in user, or a redirect to /login. */
 export async function verifySession() {
   const user = await getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/auth/login')
   return user
 }
 
 /** The signed-in user if their role is allowed; others go to the dashboard. The API enforces the same rule. */
 export async function requireRole(roles: Role[]) {
   const user = await verifySession()
-  if (!roles.includes(user.role)) redirect('/')
+  if (!roles.includes(user.role)) redirect('/dashboard')
   return user
 }

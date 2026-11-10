@@ -31,16 +31,16 @@ A staff + member web app with real accounts, email verification, and self-servic
 
 | Screen | Route | Access |
 |---|---|---|
-| Login | `/login` | public |
-| Register | `/register` | public |
-| Forgot password | `/forgot-password` | public |
-| Reset password | `/reset-password?token=…` | public |
-| Verify email | `/verify-email?token=…` | public |
-| Dashboard | `/` | signed in — staff see stats, members see their loans |
-| Catalog | `/catalog` | signed in — staff can add titles |
-| Members | `/members` | staff |
-| Circulation | `/circulation` | staff |
-| Users & access | `/admin/users` | super admin |
+| Login | `/auth/login` | public |
+| Register | `/auth/register` | public |
+| Forgot password | `/auth/forgot-password` | public |
+| Reset password | `/auth/reset-password?token=…` | public |
+| Verify email | `/auth/verify-email?token=…` | public |
+| Dashboard | `/dashboard` | signed in — staff see stats, members see their loans |
+| Catalog | `/dashboard/catalog` | signed in — staff can add titles |
+| Members | `/dashboard/members` | staff |
+| Circulation | `/dashboard/circulation` | staff |
+| Users & access | `/dashboard/admin/users` | super admin |
 | Dev inbox | `/dev/mail` | development only |
 
 Stack as built: Next.js 16.4 (React 19.3, App Router) on :3000, NestJS 12.4 (Express) on :4000, PostgreSQL 16 in Docker, TypeORM 1.1 (@nestjs/typeorm), class-validator DTOs, `pg` 8.23.1, nodemailer 7 (optional), Node 24, npm workspaces. Hand-written CSS, no UI framework.
@@ -63,7 +63,7 @@ Three roles, ordered: `member` < `admin` < `super_admin`.
 Enforcement is layered:
 
 1. **API** — a global NestJS guard denies every route without a session unless it is `@Public()`; `@Roles()` narrows it. This is the real boundary.
-2. **Frontend** — `proxy.ts` sends requests without a session cookie to `/login?redirect=…`; every page then checks the session (and its role) on the server through `lib/dal.ts`, redirecting before anything renders.
+2. **Frontend** — `proxy.ts` sends requests without a session cookie to `/auth/login?redirect=…`; every page then checks the session (and its role) on the server through `lib/dal.ts`, redirecting before anything renders.
 3. **UI** — nav items and actions are hidden by role.
 
 Open registration always creates a `member`; only a super admin promotes to `admin` or `super_admin`.
@@ -246,9 +246,9 @@ backend/                        NestJS
   scripts/seed.mjs
   test/api.test.mjs             node:test against the live API
 frontend/src/                   Next.js App Router (config stays in frontend/)
-  app/(dashboard)/              sidebar layout; dashboard,
+  app/dashboard/                sidebar layout; dashboard,
                                 catalog, members, circulation, admin/users
-  app/(auth)/                   login, register, forgot/reset password, verify
+  app/auth/                     login, register, forgot/reset password, verify
   app/dev/mail/                 dev inbox
   components/<feature>/         client components
   actions/                      Server Actions per domain
@@ -264,9 +264,9 @@ scripts/dev.mjs                 `npm run dev` runs both apps
 Tested against the running app:
 
 **Accounts & roles**
-- Anonymous `/` → 302 to `/login?redirect=/`; `/api/stats` → 401.
+- Anonymous `/` → 302 to `/auth/login?redirect=/`; `/api/stats` → 401.
 - Each demo account logs in with the right role; wrong password → 401.
-- Member: `/api/loans/mine` 200; `/api/members` 403; `POST /api/books` 403; `/members` → redirected home.
+- Member: `/api/loans/mine` 200; `/api/members` 403; `POST /api/books` 403; `/dashboard/members` → redirected to `/dashboard`.
 - Admin: `/api/admin/users` 403. Super admin: 200; promote works; self-demotion 400.
 - Register: new account `member` + `M006`; duplicate email 409; short password 400.
 - Logout → `/api/auth/me` 401.

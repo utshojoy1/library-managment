@@ -7,7 +7,7 @@ import type { FormState } from '@/lib/types'
 /** Only same-site paths: `//evil.com` or `https://…` must not become an open redirect. */
 function safeTarget(value: FormDataEntryValue | null) {
   const target = typeof value === 'string' ? value : ''
-  return target.startsWith('/') && !target.startsWith('//') ? target : '/'
+  return target.startsWith('/') && !target.startsWith('//') ? target : '/dashboard'
 }
 
 export async function login(_prev: FormState, form: FormData): Promise<FormState> {
@@ -35,7 +35,7 @@ export async function register(_prev: FormState, form: FormData): Promise<FormSt
   } catch (error) {
     return formError(error)
   }
-  redirect('/')
+  redirect('/dashboard')
 }
 
 export async function forgotPassword(_prev: FormState, form: FormData): Promise<FormState> {

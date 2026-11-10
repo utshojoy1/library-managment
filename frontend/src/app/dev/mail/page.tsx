@@ -57,7 +57,7 @@ export default async function DevMailPage() {
       ))}
 
       <p className="hint" style={{ textAlign: 'center' }}>
-        Development only · <Link href="/login" className="link-sm">Back to sign in</Link>
+        Development only · <Link href="/auth/login" className="link-sm">Back to sign in</Link>
       </p>
     </div>
   )

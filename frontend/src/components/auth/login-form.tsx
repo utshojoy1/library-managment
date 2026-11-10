@@ -42,7 +42,7 @@ export function LoginForm({ redirectTo, notice }: { redirectTo: string; notice: 
         <div className="field" style={{ marginTop: 12 }}>
           <div className="label-row">
             <label className="label" htmlFor="password">Password</label>
-            <Link href="/forgot-password" className="link-sm">Forgot password?</Link>
+            <Link href="/auth/forgot-password" className="link-sm">Forgot password?</Link>
           </div>
           <PasswordInput
             id="password"
@@ -60,7 +60,7 @@ export function LoginForm({ redirectTo, notice }: { redirectTo: string; notice: 
       </form>
 
       <p className="auth-switch">
-        New here? <Link href="/register">Create an account</Link>
+        New here? <Link href="/auth/register">Create an account</Link>
       </p>
     </div>
   )

@@ -50,7 +50,7 @@ export function RegisterForm() {
       </form>
 
       <p className="auth-switch">
-        Already registered? <Link href="/login">Sign in</Link>
+        Already registered? <Link href="/auth/login">Sign in</Link>
       </p>
     </div>
   )

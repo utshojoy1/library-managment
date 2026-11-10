@@ -9,7 +9,7 @@ type Search = { redirect?: string; reset?: string; verified?: string }
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<Search> }) {
   // Already signed in (and the session is still valid): skip the form.
-  if (await getUser()) redirect('/')
+  if (await getUser()) redirect('/dashboard')
 
   const params = await searchParams
   const notice = params.reset
@@ -19,5 +19,5 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       : ''
 
   // The server action re-checks this target before redirecting.
-  return <LoginForm redirectTo={params.redirect ?? '/'} notice={notice} />
+  return <LoginForm redirectTo={params.redirect ?? '/dashboard'} notice={notice} />
 }

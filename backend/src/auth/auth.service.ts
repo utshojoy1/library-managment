@@ -101,7 +101,7 @@ export class AuthService {
     if (!user?.isActive) return
     try {
       const token = await this.emailTokens.issue(user.id, 'reset_password')
-      await this.mail.send({ to: user.email, ...resetPasswordMessage(user.name, `${APP_URL}/reset-password?token=${token}`) })
+      await this.mail.send({ to: user.email, ...resetPasswordMessage(user.name, `${APP_URL}/auth/reset-password?token=${token}`) })
     } catch (mailError) {
       this.logger.error('reset email failed', mailError)
     }
@@ -119,6 +119,6 @@ export class AuthService {
 
   private async sendVerification(user: User) {
     const token = await this.emailTokens.issue(user.id, 'verify_email')
-    await this.mail.send({ to: user.email, ...verifyEmailMessage(user.name, `${APP_URL}/verify-email?token=${token}`) })
+    await this.mail.send({ to: user.email, ...verifyEmailMessage(user.name, `${APP_URL}/auth/verify-email?token=${token}`) })
   }
 }

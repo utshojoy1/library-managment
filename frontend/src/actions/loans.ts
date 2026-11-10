@@ -17,7 +17,7 @@ export async function checkout(_prev: FormState, form: FormData): Promise<FormSt
   } catch (error) {
     return formError(error)
   }
-  revalidatePath('/circulation')
+  revalidatePath('/dashboard/circulation')
   return { ok: `Issued “${res.bookTitle}” to ${res.memberName} — due ${formatDate(res.dueAt)}.` }
 }
 
@@ -28,7 +28,7 @@ export async function returnCopy(_prev: FormState, form: FormData): Promise<Form
   } catch (error) {
     return formError(error)
   }
-  revalidatePath('/circulation')
+  revalidatePath('/dashboard/circulation')
   return {
     ok: res.daysLate
       ? `Returned “${res.bookTitle}” — ${res.daysLate} day(s) late.`

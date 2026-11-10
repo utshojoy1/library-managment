@@ -16,7 +16,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
       <>
         <h1>Password updated</h1>
         <p className="sub">Your password has been changed and all other sessions were signed out.</p>
-        <Link href="/login?reset=1" className="btn btn-primary auth-submit">Sign in</Link>
+        <Link href="/auth/login?reset=1" className="btn btn-primary auth-submit">Sign in</Link>
       </>
     )
   }

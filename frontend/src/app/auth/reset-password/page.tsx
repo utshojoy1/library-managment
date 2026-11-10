@@ -15,12 +15,12 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
         <>
           <h1>Invalid link</h1>
           <p className="sub">This password reset link is missing its token.</p>
-          <Link href="/forgot-password" className="btn auth-submit">Request a new link</Link>
+          <Link href="/auth/forgot-password" className="btn auth-submit">Request a new link</Link>
         </>
       )}
 
       <p className="auth-switch">
-        <Link href="/login">Back to sign in</Link>
+        <Link href="/auth/login">Back to sign in</Link>
       </p>
     </div>
   )

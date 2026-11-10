@@ -12,7 +12,7 @@ export default async function VerifyEmailPage({ searchParams }: { searchParams: 
       <div>
         <h1>Link not valid</h1>
         <p className="sub">This link is missing its token.</p>
-        <Link href="/login" className="btn auth-submit">Back to sign in</Link>
+        <Link href="/auth/login" className="btn auth-submit">Back to sign in</Link>
       </div>
     )
   }

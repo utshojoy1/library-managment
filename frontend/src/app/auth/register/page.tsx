@@ -6,6 +6,6 @@ import { RegisterForm } from '@/components/auth/register-form'
 export const metadata: Metadata = { title: 'Create an account' }
 
 export default async function RegisterPage() {
-  if (await getUser()) redirect('/')
+  if (await getUser()) redirect('/dashboard')
   return <RegisterForm />
 }

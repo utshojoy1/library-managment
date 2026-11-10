@@ -21,6 +21,6 @@ export async function createBook(_prev: FormState, form: FormData): Promise<Form
   } catch (error) {
     return formError(error)
   }
-  revalidatePath('/catalog')
+  revalidatePath('/dashboard/catalog')
   return { ok: 'Book added.' }
 }

@@ -30,9 +30,9 @@ export default async function DashboardPage() {
           </p>
         </div>
         {staff ? (
-          <Link href="/circulation" className="btn btn-primary">Issue a book</Link>
+          <Link href="/dashboard/circulation" className="btn btn-primary">Issue a book</Link>
         ) : (
-          <Link href="/catalog" className="btn btn-primary">Browse catalog</Link>
+          <Link href="/dashboard/catalog" className="btn btn-primary">Browse catalog</Link>
         )}
       </header>
 

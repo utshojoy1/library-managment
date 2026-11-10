@@ -7,7 +7,7 @@ export default function NotFound() {
         <div className="auth-card">
           <h1>Page not found</h1>
           <p className="sub">There is nothing at this address.</p>
-          <Link href="/" className="btn btn-primary auth-submit">Go to dashboard</Link>
+          <Link href="/dashboard" className="btn btn-primary auth-submit">Go to dashboard</Link>
         </div>
       </div>
     </div>

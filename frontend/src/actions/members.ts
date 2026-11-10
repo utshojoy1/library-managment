@@ -14,6 +14,6 @@ export async function createMember(_prev: FormState, form: FormData): Promise<Fo
   } catch (error) {
     return formError(error)
   }
-  revalidatePath('/members')
+  revalidatePath('/dashboard/members')
   return { ok: 'Member added.' }
 }

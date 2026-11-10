@@ -48,7 +48,7 @@ const ICONS = {
 /** Client only for the active-link highlight; the list itself comes from the server layout. */
 export function NavLinks({ items }: { items: NavItem[] }) {
   const pathname = usePathname()
-  const isActive = (to: string) => (to === '/' ? pathname === '/' : pathname.startsWith(to))
+  const isActive = (to: string) => (to === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(to))
 
   return (
     <nav className="nav">

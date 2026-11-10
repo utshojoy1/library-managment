@@ -15,15 +15,15 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const isStaff = STAFF.includes(user.role)
 
   const items: NavItem[] = [
-    { to: '/', label: 'Dashboard', icon: 'grid' },
-    { to: '/catalog', label: 'Catalog', icon: 'book' },
+    { to: '/dashboard', label: 'Dashboard', icon: 'grid' },
+    { to: '/dashboard/catalog', label: 'Catalog', icon: 'book' },
     ...(isStaff
       ? ([
-          { to: '/members', label: 'Members', icon: 'users' },
-          { to: '/circulation', label: 'Circulation', icon: 'swap' },
+          { to: '/dashboard/members', label: 'Members', icon: 'users' },
+          { to: '/dashboard/circulation', label: 'Circulation', icon: 'swap' },
         ] satisfies NavItem[])
       : []),
-    ...(user.role === 'super_admin' ? ([{ to: '/admin/users', label: 'Users', icon: 'shield' }] satisfies NavItem[]) : []),
+    ...(user.role === 'super_admin' ? ([{ to: '/dashboard/admin/users', label: 'Users', icon: 'shield' }] satisfies NavItem[]) : []),
   ]
 
   const initials = user.name
