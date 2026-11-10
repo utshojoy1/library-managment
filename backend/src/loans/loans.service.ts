@@ -1,12 +1,12 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm'
 import { DataSource, Repository } from 'typeorm'
-import { Book } from '../books/book.entity.js'
-import { Copy } from '../books/copy.entity.js'
-import { Member } from '../members/member.entity.js'
+import { Book } from '../entities/book.entity.js'
+import { Copy } from '../entities/copy.entity.js'
+import { Member } from '../entities/member.entity.js'
 import type { CheckoutDto } from './dto/checkout.dto.js'
 import type { ListLoansQueryDto } from './dto/list-loans-query.dto.js'
-import { Loan } from './loan.entity.js'
+import { Loan } from '../entities/loan.entity.js'
 
 const LOAN_DAYS = 14
 const MAX_ACTIVE_LOANS = 5

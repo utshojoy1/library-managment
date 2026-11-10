@@ -7,7 +7,7 @@
     "build": "nest build",
     "start": "node dist/main.js",
     "test": "node --env-file-if-exists=.env --test \"test/*.test.mjs\"",
-    "typeorm": "typeorm -d dist/database/data-source.js",
+    "typeorm": "typeorm -d dist/data-source.js",
     "db:generate": "nest build && npm run typeorm -- migration:generate",
     "db:migrate": "nest build && npm run typeorm -- migration:run",
     "db:revert": "nest build && npm run typeorm -- migration:revert",

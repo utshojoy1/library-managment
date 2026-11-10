@@ -1,5 +1,5 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Unique } from 'typeorm'
-import { User } from '../users/user.entity.js'
+import { User } from './user.entity.js'
 
 @Entity('members')
 @Unique('members_member_no_unique', ['memberNo'])

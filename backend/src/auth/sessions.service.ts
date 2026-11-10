@@ -3,9 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm'
 import type { Response } from 'express'
 import { LessThan, Repository } from 'typeorm'
 import type { Role, SessionUser } from '../common/roles.js'
-import type { User } from '../users/user.entity.js'
+import type { User } from '../entities/user.entity.js'
 import { randomToken, sha256 } from './password.js'
-import { Session } from './session.entity.js'
+import { Session } from '../entities/session.entity.js'
 
 export const SESSION_COOKIE = 'library_session'
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000

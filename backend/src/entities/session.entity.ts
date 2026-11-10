@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm'
-import { User } from '../users/user.entity.js'
+import { User } from './user.entity.js'
 
 @Entity('sessions')
 export class Session {

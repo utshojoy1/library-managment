@@ -3,7 +3,7 @@ import { InjectDataSource, InjectRepository } from '@nestjs/typeorm'
 import { DataSource, Repository } from 'typeorm'
 import type { SessionUser } from '../common/roles.js'
 import type { UpdateUserDto } from './dto/update-user.dto.js'
-import { User } from './user.entity.js'
+import { User } from '../entities/user.entity.js'
 
 /** Account fields an admin may see — never the password hash. */
 const toAccount = ({ id, name, email, role, isActive, createdAt }: User) => ({ id, name, email, role, isActive, createdAt })

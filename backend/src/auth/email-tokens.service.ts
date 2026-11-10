@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { type EntityManager, IsNull, Repository } from 'typeorm'
-import { EmailToken, type EmailTokenPurpose } from './email-token.entity.js'
+import { EmailToken, type EmailTokenPurpose } from '../entities/email-token.entity.js'
 import { randomToken, sha256 } from './password.js'
 
 const TOKEN_TTL_MINUTES: Record<EmailTokenPurpose, number> = {

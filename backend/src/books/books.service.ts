@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm'
 import { DataSource, Repository } from 'typeorm'
-import { Book } from './book.entity.js'
-import { Copy } from './copy.entity.js'
+import { Book } from '../entities/book.entity.js'
+import { Copy } from '../entities/copy.entity.js'
 import type { CreateBookDto } from './dto/create-book.dto.js'
 
 @Injectable()

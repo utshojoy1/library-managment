@@ -1,6 +1,6 @@
 import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm'
-import { Copy } from '../books/copy.entity.js'
-import { Member } from '../members/member.entity.js'
+import { Copy } from './copy.entity.js'
+import { Member } from './member.entity.js'
 
 export type LoanStatus = 'active' | 'returned'
 

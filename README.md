@@ -57,7 +57,7 @@ The browser only talks to Next.js. Pages render on the Next.js server, which cal
 | `npm run dev` | Backend (watch) + frontend (HMR) together; Ctrl+C stops both |
 | `npm run build` / `npm start` | Production build, then run both built apps |
 | `npm test` | API tests against a running, freshly seeded backend |
-| `npm run db:generate -- backend/src/database/migrations/<Name>` | Migration from the entity changes |
+| `npm run db:generate -- backend/src/migrations/<Name>` | Migration from the entity changes |
 | `npm run db:migrate` | Apply pending migrations |
 | `npm run db:revert -w backend` | Undo the last migration |
 | `npm run db:seed` | **Wipe** and load demo data |
@@ -78,7 +78,7 @@ backend/                     NestJS API
     stats/                   dashboard counts
     mail/                    SMTP + outbox, email templates, dev outbox
   src/common/                roles, decorators (@Public, @Roles, @CurrentUser), DTO transforms, rate limiter
-  src/database/              data-source.ts (app + CLI) and migrations/
+  src/data-source.ts         TypeORM data source (app + CLI); src/entities/, src/migrations/
   scripts/seed.mjs           demo data
   test/api.test.mjs          API tests (node:test)
 frontend/                    Next.js App Router; config files at the root, code in src/

@@ -3,7 +3,7 @@ import { InjectDataSource, InjectRepository } from '@nestjs/typeorm'
 import { randomUUID } from 'node:crypto'
 import { DataSource, type EntityManager, Repository } from 'typeorm'
 import type { CreateMemberDto } from './dto/create-member.dto.js'
-import { Member } from './member.entity.js'
+import { Member } from '../entities/member.entity.js'
 
 @Injectable()
 export class MembersService {

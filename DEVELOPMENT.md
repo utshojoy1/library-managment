@@ -42,7 +42,7 @@ The defaults match the Compose database. The API, the TypeORM CLI and the seed s
 ## 5. Create tables and demo data
 
 ```bash
-npm run db:migrate    # builds the API, then applies backend/src/database/migrations/*
+npm run db:migrate    # builds the API, then applies backend/src/migrations/*
 npm run db:seed       # truncates and reloads demo data
 ```
 
@@ -84,7 +84,7 @@ The entities (`backend/src/<feature>/*.entity.ts`) describe the schema; migratio
 
 ```bash
 # 1. edit an entity (or add one: a new *.entity.ts is picked up automatically)
-npm run db:generate -- backend/src/database/migrations/AddFines   # diff entities vs the DB
+npm run db:generate -- backend/src/migrations/AddFines   # diff entities vs the DB
 npm run db:migrate                                                  # applies it
 ```
 

@@ -14,12 +14,12 @@ import { rateLimit } from '../common/rate-limit.js'
 import { resetPasswordMessage, verifyEmailMessage } from '../mail/mail.templates.js'
 import { MailService } from '../mail/mail.service.js'
 import { MembersService } from '../members/members.service.js'
-import { User } from '../users/user.entity.js'
+import { User } from '../entities/user.entity.js'
 import type { LoginDto } from './dto/login.dto.js'
 import type { RegisterDto } from './dto/register.dto.js'
 import { EmailTokensService } from './email-tokens.service.js'
 import { hashPassword, verifyPassword } from './password.js'
-import { Session } from './session.entity.js'
+import { Session } from '../entities/session.entity.js'
 
 const FIFTEEN_MIN = 15 * 60 * 1000
 

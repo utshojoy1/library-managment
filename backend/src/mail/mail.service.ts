@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
-import { Email, type EmailStatus } from './email.entity.js'
+import { Email, type EmailStatus } from '../entities/email.entity.js'
 import type { MailInput } from './mail.templates.js'
 
 /** The dev inbox exists only when nothing is really sent and we are not in production. */

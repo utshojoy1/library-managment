@@ -242,7 +242,7 @@ backend/                        NestJS
   src/main.ts, app.module.ts     bootstrap, ValidationPipe, root module
   src/<feature>/                module + controller + service + entity + dto/ (auth, users, members, books, loans, stats, mail)
   src/common/                   roles, decorators, DTO transforms, rate limiter
-  src/database/                 data source + TypeORM migrations
+  src/data-source.ts             TypeORM data source; entities/, migrations/
   scripts/seed.mjs
   test/api.test.mjs             node:test against the live API
 frontend/src/                   Next.js App Router (config stays in frontend/)
