@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { CheckoutForm, ReturnForm } from '@/components/circulation/circulation-forms'
 import { LoanStatus } from '@/components/loans/loan-status'
 import { api, ApiError } from '@/lib/api'
 import { verifySession } from '@/lib/dal'
 import { formatDate } from '@/lib/format'
-import { STAFF, type Book, type Loan } from '@/lib/types'
+import { STAFF, type Book, type Loan, type Member } from '@/lib/types'
 
 export const metadata: Metadata = { title: 'Book details' }
 
@@ -16,13 +17,16 @@ export default async function BookPage({ params }: { params: Promise<{ id: strin
 
   const staff = STAFF.includes(user.role)
   // The borrow history names members, so only staff load it (the API enforces the same rule).
-  const [book, ledger] = await Promise.all([
+  const [book, ledger, members] = await Promise.all([
     api<Book>(`/books/${id}`).catch((e) => {
       if (e instanceof ApiError && e.status === 404) notFound()
       throw e
     }),
     staff ? api<Loan[]>(`/loans?bookId=${id}&limit=200`) : null,
+    staff ? api<Member[]>('/members') : null,
   ])
+  // Only this book's copies, so the book code suggestions stay on this title.
+  const copies = book.copies.map((c) => ({ ...c, title: book.title, author: book.author }))
 
   return (
     <div>
@@ -59,6 +63,13 @@ export default async function BookPage({ params }: { params: Promise<{ id: strin
           </div>
         )}
       </section>
+
+      {members && (
+        <div className="split">
+          <CheckoutForm members={members} copies={copies} />
+          <ReturnForm copies={copies} />
+        </div>
+      )}
 
       {ledger && (
         <section className="card">

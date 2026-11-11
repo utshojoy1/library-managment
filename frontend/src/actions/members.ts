@@ -52,3 +52,13 @@ export async function deleteMember(id: number): Promise<FormState> {
   revalidatePath('/dashboard', 'layout')
   return { ok: 'Member deleted.' }
 }
+
+export async function setMemberPassword(id: number, _prev: FormState, form: FormData): Promise<FormState> {
+  try {
+    await apiResponse(`/members/${id}/password`, { method: 'PUT', body: { password: form.get('password') } }) // 204
+  } catch (error) {
+    return formError(error)
+  }
+  revalidatePath('/dashboard', 'layout') // the change shows in the activity feed
+  return { ok: 'Password updated. They’ve been signed out everywhere.' }
+}

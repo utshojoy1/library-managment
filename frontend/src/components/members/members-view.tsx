@@ -6,6 +6,7 @@ import type { Member } from '@/lib/types'
 import { AddMemberForm } from './add-member-form'
 import { MemberStatusButton } from './member-status-button'
 import { DeleteMemberButton } from './delete-member-button'
+import { SetPasswordButton } from './set-password-button'
 
 /** Client for the add/edit form toggle; the list comes from server data. Editing and disabling are super-admin only. */
 export function MembersView({ members, canManage }: { members: Member[]; canManage: boolean }) {
@@ -91,6 +92,7 @@ export function MembersView({ members, canManage }: { members: Member[]; canMana
                         >
                           Edit
                         </button>
+                        {member.hasAccount && <SetPasswordButton member={member} />}
                         <MemberStatusButton member={member} onError={setError} />
                         <DeleteMemberButton member={member} onError={setError} />
                       </div>

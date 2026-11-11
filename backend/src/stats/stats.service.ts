@@ -35,7 +35,7 @@ export class StatsService {
    * Recent entries from the activity log, newest first. `bookId`/`memberId` are null once
    * that book or member is deleted (FK on delete set null); names come from the logged snapshot.
    */
-  activity(limit = 12, booksOnly = false) {
+  activity(limit = 12, booksOnly = false, offset = 0) {
     return this.dataSource.query<
       { type: string; at: string; subject: string; detail: string | null; actor: string | null; bookId: number | null; memberId: number | null }[]
     >(
@@ -47,9 +47,17 @@ export class StatsService {
         left join users u on u.id = a.actor_id
        where not $2 or a.action not like 'member\\_%'
        order by a.at desc, a.id desc
-       limit $1
+       limit $1 offset $3
       `,
-      [limit, booksOnly],
+      [limit, booksOnly, offset],
     )
+  }
+
+  async activityCount(booksOnly = false) {
+    const [r] = await this.dataSource.query<{ total: number }[]>(
+      `select count(*)::int as total from activity_logs where not $1 or action not like 'member\\_%'`,
+      [booksOnly],
+    )
+    return r!.total
   }
 }

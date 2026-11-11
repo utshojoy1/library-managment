@@ -45,6 +45,8 @@ export type Member = {
   joinedAt: string
   isActive: boolean
   activeLoans: number
+  /** Has a login account (self-registered), so a password can be set. */
+  hasAccount: boolean
 }
 
 export type Account = { id: number; name: string; email: string; role: Role; isActive: boolean; createdAt: string }

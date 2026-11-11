@@ -735,6 +735,51 @@ a {
   filter: brightness(0.92);
 }
 
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pagination-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagination-pages a.btn {
+  min-width: 32px;
+  text-decoration: none;
+}
+
+.pagination-pages [aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.pagination-gap {
+  padding: 0 4px;
+}
+
+.page-size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.page-size .input {
+  width: auto;
+  height: 30px;
+  padding: 0 8px;
+}
+
 .toast-stack {
   position: fixed;
   top: 16px;

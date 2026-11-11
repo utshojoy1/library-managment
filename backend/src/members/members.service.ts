@@ -1,9 +1,12 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm'
 import { randomUUID } from 'node:crypto'
 import { DataSource, type EntityManager, Repository } from 'typeorm'
 import type { CreateMemberDto } from './dto/create-member.dto.js'
+import { hashPassword } from '../auth/password.js'
 import { Member } from '../entities/member.entity.js'
+import { Session } from '../entities/session.entity.js'
+import { User } from '../entities/user.entity.js'
 import { type Actor, logActivity } from '../common/activity.js'
 import { isForeignKeyViolation } from '../common/db-errors.js'
 
@@ -24,6 +27,7 @@ export class MembersService {
       .addSelect('m.phone', 'phone')
       .addSelect('m.joined_at::text', 'joinedAt')
       .addSelect('m.isActive', 'isActive')
+      .addSelect('m.userId is not null', 'hasAccount')
       .addSelect(
         `(select count(*)::int from loans where loans.member_id = m.id and loans.status = 'active')`,
         'activeLoans',
@@ -47,6 +51,19 @@ export class MembersService {
       const action = values.isActive === undefined ? 'member_updated' : values.isActive ? 'member_enabled' : 'member_disabled'
       await logActivity(manager, actor, { action, subject: member.name, detail: member.memberNo, memberId: id })
       return member
+    })
+  }
+
+  async setPassword(id: number, password: string, actor: Actor) {
+    const passwordHash = await hashPassword(password)
+    await this.dataSource.transaction(async (manager) => {
+      const member = await manager.findOneBy(Member, { id })
+      if (!member) throw new NotFoundException('Member not found')
+      if (!member.userId) throw new BadRequestException('This member has no login account')
+      await manager.update(User, member.userId, { passwordHash })
+      // Same as a self-service reset: every existing session ends.
+      await manager.delete(Session, { userId: member.userId })
+      await logActivity(manager, actor, { action: 'member_updated', subject: member.name, detail: 'Password changed', memberId: id })
     })
   }
 

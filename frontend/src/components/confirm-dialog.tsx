@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 
 type Options = { title: string; message: string; confirmLabel?: string; danger?: boolean }
 
@@ -14,7 +15,8 @@ export function useConfirm() {
   const [options, setOptions] = useState<Options | null>(null)
 
   const confirm = (opts: Options) => {
-    setOptions(opts)
+    // Render the new text/colours before opening, or the old ones flash for a frame.
+    flushSync(() => setOptions(opts))
     // returnValue survives between openings, and Esc doesn't overwrite it — reset so Esc means cancel.
     if (ref.current) ref.current.returnValue = ''
     ref.current?.showModal()

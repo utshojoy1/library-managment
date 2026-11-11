@@ -3,6 +3,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator.js'
 import { Roles } from '../common/decorators/roles.decorator.js'
 import { STAFF, type SessionUser } from '../common/roles.js'
 import { CreateMemberDto } from './dto/create-member.dto.js'
+import { SetMemberPasswordDto } from './dto/set-password.dto.js'
 import { SetMemberStatusDto, UpdateMemberDto } from './dto/update-member.dto.js'
 import { MembersService } from './members.service.js'
 
@@ -32,6 +33,14 @@ export class MembersController {
   @Roles('super_admin')
   setStatus(@Param('id', ParseIntPipe) id: number, @Body() dto: SetMemberStatusDto, @CurrentUser() user: SessionUser) {
     return this.members.update(id, { isActive: dto.isActive }, user)
+  }
+
+  /** Sets the login password of a member's account and signs them out everywhere. */
+  @Put(':id/password')
+  @Roles('super_admin')
+  @HttpCode(204)
+  setPassword(@Param('id', ParseIntPipe) id: number, @Body() dto: SetMemberPasswordDto, @CurrentUser() user: SessionUser) {
+    return this.members.setPassword(id, dto.password, user)
   }
 
   @Delete(':id')
