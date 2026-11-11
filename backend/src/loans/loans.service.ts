@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm'
 import { DataSource, Repository } from 'typeorm'
+import { type Actor, logActivity } from '../common/activity.js'
 import { Book } from '../entities/book.entity.js'
 import { Copy } from '../entities/copy.entity.js'
 import { Member } from '../entities/member.entity.js'
@@ -70,7 +71,7 @@ export class LoansService {
     return this.loanRows().where('l.memberId = :memberId', { memberId: member.id }).limit(50).getRawMany()
   }
 
-  checkout({ barcode, memberNo, dueDate }: CheckoutDto) {
+  checkout({ barcode, memberNo, dueDate }: CheckoutDto, actor: Actor) {
     const dueAt = dueDate ? customDueAt(dueDate) : new Date(Date.now() + LOAN_DAYS * DAY_MS)
     return this.dataSource.transaction(async (manager) => {
       // Lock the member too, so two desks can't push them past the loan limit.
@@ -89,9 +90,9 @@ export class LoansService {
         .where('c.barcode = :barcode', { barcode })
         .setLock('pessimistic_write', undefined, ['c'])
         .getOne()
-      if (!copy) throw new NotFoundException(`No copy found with barcode ${barcode}`)
+      if (!copy) throw new NotFoundException(`No book found with code ${barcode}`)
       if (copy.status !== 'available') {
-        throw new ConflictException(`Copy ${barcode} is already borrowed`)
+        throw new ConflictException(`Book code ${barcode} is already borrowed`)
       }
 
       const count = await manager.countBy(Loan, { memberId: member.id, status: 'active' })
@@ -103,30 +104,45 @@ export class LoansService {
         manager.create(Loan, { copyId: copy.id, memberId: member.id, dueAt }),
       )
       await manager.update(Copy, copy.id, { status: 'on_loan' })
+      await logActivity(manager, actor, {
+        action: 'issued',
+        subject: copy.book!.title,
+        detail: member.name,
+        bookId: copy.bookId,
+        memberId: member.id,
+      })
 
       return { loanId: loan.id, bookTitle: copy.book!.title, memberName: member.name, dueAt: loan.dueAt }
     })
   }
 
-  returnCopy(barcode: string) {
+  returnCopy(barcode: string, actor: Actor) {
     return this.dataSource.transaction(async (manager) => {
       const copy = await manager
         .createQueryBuilder(Copy, 'c')
         .where('c.barcode = :barcode', { barcode })
         .setLock('pessimistic_write')
         .getOne()
-      if (!copy) throw new NotFoundException(`No copy found with barcode ${barcode}`)
+      if (!copy) throw new NotFoundException(`No book found with code ${barcode}`)
 
       const loan = await manager.findOneBy(Loan, { copyId: copy.id, status: 'active' })
-      if (!loan) throw new ConflictException(`Copy ${barcode} is not borrowed`)
+      if (!loan) throw new ConflictException(`Book code ${barcode} is not borrowed`)
 
       const book = await manager.findOneBy(Book, { id: copy.bookId })
+      const member = await manager.findOneBy(Member, { id: loan.memberId })
 
       const returnedAt = new Date()
       await manager.update(Loan, loan.id, { returnedAt, status: 'returned' })
       await manager.update(Copy, copy.id, { status: 'available' })
 
       const daysLate = Math.max(0, Math.floor((returnedAt.getTime() - loan.dueAt.getTime()) / DAY_MS))
+      await logActivity(manager, actor, {
+        action: 'returned',
+        subject: book?.title ?? 'Unknown title',
+        detail: member ? member.name + (daysLate ? ` · ${daysLate} day${daysLate === 1 ? '' : 's'} late` : '') : null,
+        bookId: copy.bookId,
+        memberId: loan.memberId,
+      })
       return { bookTitle: book?.title ?? 'Unknown title', daysLate, returnedAt }
     })
   }

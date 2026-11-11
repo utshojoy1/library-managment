@@ -1,13 +1,8 @@
 'use client'
 
 import { useActionState, useEffect, useRef, useState } from 'react'
-import { normalizeCode } from '@/lib/format'
 import type { FormState, Member } from '@/lib/types'
 import { checkout, returnCopy } from '@/actions/loans'
-
-// React's onChange fires for typing, paste, autofill and scanners alike.
-const code = (setter: (value: string) => void) => (e: { target: { value: string } }) =>
-  setter(normalizeCode(e.target.value))
 
 function Result({ state }: { state: FormState }) {
   if (state.error) return <div className="banner banner-error">{state.error}</div>
@@ -22,7 +17,57 @@ function localDate(daysFromToday: number) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export function CheckoutForm({ members }: { members: Pick<Member, 'memberNo' | 'name' | 'isActive'>[] }) {
+export type CopyOption = { barcode: string; status: string; title: string; author: string }
+
+/**
+ * Book code input with the same pick-from-list + live hint as the member field.
+ * `want` is the status a copy must have for this form: available to issue, on_loan to return.
+ */
+function BookCodeField({
+  id,
+  copies,
+  want,
+  value,
+  onChange,
+  inputRef,
+}: {
+  id: string
+  copies: CopyOption[]
+  want: 'available' | 'on_loan'
+  value: string
+  onChange: (value: string) => void
+  inputRef?: React.Ref<HTMLInputElement>
+}) {
+  const query = value.trim()
+  const match = copies.find((c) => c.barcode === query)
+  const listId = `${id}-options`
+  // Empty until something is typed, so focusing the field doesn't dump every copy.
+  const suggestions = query
+    ? copies.filter((c) => c.status === want && (c.barcode.includes(query) || c.title.toUpperCase().includes(query))).slice(0, 8)
+    : []
+  return (
+    <>
+      <label className="label" htmlFor={id}>Book code</label>
+      <input id={id} name="barcode" ref={inputRef} className="input code-input" list={listId} placeholder="B0001-1 or a title" value={value} onChange={(e) => onChange(e.target.value.toUpperCase())} required autoComplete="off" />
+      <datalist id={listId}>
+        {suggestions.map((c) => (
+          <option key={c.barcode} value={c.barcode}>{`${c.title} — ${c.author}`}</option>
+        ))}
+      </datalist>
+      {value.trim() && (
+        <p className="hint" aria-live="polite">
+          {!match
+            ? 'No book with this code'
+            : match.status === want
+              ? `${match.title} — ${match.author}`
+              : `${match.title} — ${want === 'available' ? 'already borrowed' : 'not borrowed'}`}
+        </p>
+      )}
+    </>
+  )
+}
+
+export function CheckoutForm({ members, copies }: { members: Pick<Member, 'memberNo' | 'name' | 'isActive'>[]; copies: CopyOption[] }) {
   const [state, action, pending] = useActionState<FormState, FormData>(checkout, {})
   const [memberNo, setMemberNo] = useState('')
   const [barcode, setBarcode] = useState('')
@@ -61,8 +106,7 @@ export function CheckoutForm({ members }: { members: Pick<Member, 'memberNo' | '
             )}
           </div>
           <div className="field" style={{ marginBottom: 10 }}>
-            <label className="label" htmlFor="outBarcode">Copy barcode</label>
-            <input id="outBarcode" name="barcode" ref={barcodeInput} className="input code-input" placeholder="B0001-1" value={barcode} onChange={code(setBarcode)} required />
+            <BookCodeField id="outBarcode" copies={copies} want="available" value={barcode} onChange={setBarcode} inputRef={barcodeInput} />
           </div>
           <div className="field">
             <label className="label" htmlFor="dueDate">Due date</label>
@@ -79,7 +123,7 @@ export function CheckoutForm({ members }: { members: Pick<Member, 'memberNo' | '
   )
 }
 
-export function ReturnForm() {
+export function ReturnForm({ copies }: { copies: CopyOption[] }) {
   const [state, action, pending] = useActionState<FormState, FormData>(returnCopy, {})
   const [barcode, setBarcode] = useState('')
 
@@ -94,8 +138,7 @@ export function ReturnForm() {
         <Result state={state} />
         <form action={action}>
           <div className="field">
-            <label className="label" htmlFor="inBarcode">Copy barcode</label>
-            <input id="inBarcode" name="barcode" className="input code-input" placeholder="B0001-1" value={barcode} onChange={code(setBarcode)} required />
+            <BookCodeField id="inBarcode" copies={copies} want="on_loan" value={barcode} onChange={setBarcode} />
           </div>
           <div className="actions">
             <button type="submit" className="btn" disabled={pending}>

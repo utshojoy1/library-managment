@@ -25,13 +25,13 @@ export class LoansController {
 
   @Post('checkout')
   @Roles(...STAFF)
-  checkout(@Body() dto: CheckoutDto) {
-    return this.loans.checkout(dto)
+  checkout(@Body() dto: CheckoutDto, @CurrentUser() user: SessionUser) {
+    return this.loans.checkout(dto, user)
   }
 
   @Post('return')
   @Roles(...STAFF)
-  returnCopy(@Body() dto: ReturnCopyDto) {
-    return this.loans.returnCopy(dto.barcode)
+  returnCopy(@Body() dto: ReturnCopyDto, @CurrentUser() user: SessionUser) {
+    return this.loans.returnCopy(dto.barcode, user)
   }
 }

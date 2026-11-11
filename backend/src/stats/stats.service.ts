@@ -32,31 +32,24 @@ export class StatsService {
   }
 
   /**
-   * Recent events across the library, newest first, derived from existing timestamps.
-   * shortcut: edits and deletions leave no trace here; add an audit-log table if those must show up.
+   * Recent entries from the activity log, newest first. `bookId`/`memberId` are null once
+   * that book or member is deleted (FK on delete set null); names come from the logged snapshot.
    */
-  activity(limit = 12) {
-    return this.dataSource.query<{ type: string; at: string; subject: string; detail: string | null; bookId: number | null }[]>(
+  activity(limit = 12, booksOnly = false) {
+    return this.dataSource.query<
+      { type: string; at: string; subject: string; detail: string | null; actor: string | null; bookId: number | null; memberId: number | null }[]
+    >(
       `
-      select * from (
-        select 'book_added' as type, b.created_at as at, b.title as subject, b.author as detail, b.id as "bookId"
-          from books b
-        union all
-        -- members only record a join *date*, so they sort at midnight of that day
-        select 'member_joined', m.joined_at::timestamptz, m.name, m.member_no, null
-          from members m
-        union all
-        select 'issued', l.issued_at, b.title, m.name, b.id
-          from loans l join copies c on c.id = l.copy_id join books b on b.id = c.book_id join members m on m.id = l.member_id
-        union all
-        select 'returned', l.returned_at, b.title, m.name, b.id
-          from loans l join copies c on c.id = l.copy_id join books b on b.id = c.book_id join members m on m.id = l.member_id
-          where l.returned_at is not null
-      ) a
-      order by at desc
-      limit $1
+      select a.action as type, a.at, a.subject, a.detail,
+             coalesce(u.name, a.actor_name) as actor,
+             a.book_id as "bookId", a.member_id as "memberId"
+        from activity_logs a
+        left join users u on u.id = a.actor_id
+       where not $2 or a.action not like 'member\\_%'
+       order by a.at desc, a.id desc
+       limit $1
       `,
-      [limit],
+      [limit, booksOnly],
     )
   }
 }

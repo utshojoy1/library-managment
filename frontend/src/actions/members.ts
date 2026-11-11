@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { api, formError } from '@/lib/api'
+import { api, apiResponse, formError } from '@/lib/api'
 import type { FormState } from '@/lib/types'
 
 /** The API checks the session and the staff role; this only forwards the form. */
@@ -41,4 +41,14 @@ export async function setMemberStatus(id: number, isActive: boolean): Promise<Fo
   }
   revalidatePath('/dashboard', 'layout')
   return { ok: isActive ? 'Member enabled.' : 'Member disabled.' }
+}
+
+export async function deleteMember(id: number): Promise<FormState> {
+  try {
+    await apiResponse(`/members/${id}`, { method: 'DELETE' }) // 204: no JSON body to parse
+  } catch (error) {
+    return formError(error)
+  }
+  revalidatePath('/dashboard', 'layout')
+  return { ok: 'Member deleted.' }
 }

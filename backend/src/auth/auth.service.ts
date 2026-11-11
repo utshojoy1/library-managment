@@ -58,7 +58,8 @@ export class AuthService {
       result = await this.dataSource.transaction(async (manager) => {
         const user = await manager.save(manager.create(User, { name, email, passwordHash, role: 'member' }))
         // Self-registered accounts also get a library card, so staff can lend to them.
-        const member = await this.members.insert(manager, { userId: user.id, name, email })
+        // Self sign-up: the new user is their own actor.
+        const member = await this.members.insert(manager, { userId: user.id, name, email }, user)
         return { user, memberNo: member.memberNo }
       })
     } catch (error) {

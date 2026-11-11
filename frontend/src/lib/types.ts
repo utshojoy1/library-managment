@@ -65,9 +65,23 @@ export type Mail = { id: number; to: string; subject: string; text: string; stat
 export type FormState = { error?: string; ok?: string }
 
 export type Activity = {
-  type: 'book_added' | 'member_joined' | 'issued' | 'returned'
+  type:
+    | 'book_added'
+    | 'book_updated'
+    | 'book_deleted'
+    | 'member_joined'
+    | 'member_updated'
+    | 'member_enabled'
+    | 'member_disabled'
+    | 'member_deleted'
+    | 'issued'
+    | 'returned'
   at: string
   subject: string
   detail: string | null
+  /** Who did it; null for entries backfilled from before logging existed. */
+  actor: string | null
+  /** Null once the book / member has been deleted. */
   bookId: number | null
+  memberId: number | null
 }

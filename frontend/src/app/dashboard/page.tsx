@@ -79,8 +79,9 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      <div className="charts">
       {activity && (
-        <section className="card dash-activity">
+        <section className="card">
           <div className="card-head">
             <h2>Recent activity</h2>
             <Link href="/dashboard/activity" className="link-sm">View all</Link>
@@ -91,7 +92,7 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      <section className="card">
+      <section className="card dash-borrows">
         <div className="card-head">
           <h2>{staff ? 'Active borrows' : 'My borrows'}</h2>
           {stats && stats.overdue > 0 && <span className="chip chip-red">{stats.overdue} overdue</span>}
@@ -107,7 +108,7 @@ export default async function DashboardPage() {
               <tr>
                 <th>Book</th>
                 {staff && <th>Member</th>}
-                <th>Copy</th>
+                <th>Book code</th>
                 <th>Due</th>
                 <th>Status</th>
               </tr>
@@ -136,6 +137,7 @@ export default async function DashboardPage() {
           </table>
         )}
       </section>
+      </div>
     </div>
   )
 }

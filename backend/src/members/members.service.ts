@@ -1,9 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm'
 import { randomUUID } from 'node:crypto'
 import { DataSource, type EntityManager, Repository } from 'typeorm'
 import type { CreateMemberDto } from './dto/create-member.dto.js'
 import { Member } from '../entities/member.entity.js'
+import { type Actor, logActivity } from '../common/activity.js'
+import { isForeignKeyViolation } from '../common/db-errors.js'
 
 @Injectable()
 export class MembersService {
@@ -30,16 +32,39 @@ export class MembersService {
       .getRawMany()
   }
 
-  create(dto: CreateMemberDto) {
+  create(dto: CreateMemberDto, actor: Actor) {
     return this.dataSource.transaction((manager) =>
-      this.insert(manager, { name: dto.name, email: dto.email || null, phone: dto.phone || null }),
+      this.insert(manager, { name: dto.name, email: dto.email || null, phone: dto.phone || null }, actor),
     )
   }
 
-  async update(id: number, values: Partial<Pick<Member, 'name' | 'email' | 'phone' | 'isActive'>>) {
-    const result = await this.members.update(id, values)
-    if (!result.affected) throw new NotFoundException('Member not found')
-    return this.members.findOneByOrFail({ id })
+  /** Changing only `isActive` logs as enabled/disabled; anything else as an edit. */
+  update(id: number, values: Partial<Pick<Member, 'name' | 'email' | 'phone' | 'isActive'>>, actor: Actor) {
+    return this.dataSource.transaction(async (manager) => {
+      const result = await manager.update(Member, id, values)
+      if (!result.affected) throw new NotFoundException('Member not found')
+      const member = await manager.findOneByOrFail(Member, { id })
+      const action = values.isActive === undefined ? 'member_updated' : values.isActive ? 'member_enabled' : 'member_disabled'
+      await logActivity(manager, actor, { action, subject: member.name, detail: member.memberNo, memberId: id })
+      return member
+    })
+  }
+
+  async remove(id: number, actor: Actor) {
+    try {
+      await this.dataSource.transaction(async (manager) => {
+        const member = await manager.findOneBy(Member, { id })
+        if (!member) throw new NotFoundException('Member not found')
+        // Loans don't cascade, so the database itself refuses a member with any borrow history.
+        await manager.delete(Member, id)
+        await logActivity(manager, actor, { action: 'member_deleted', subject: member.name, detail: member.memberNo })
+      })
+    } catch (error) {
+      if (isForeignKeyViolation(error)) {
+        throw new ConflictException('This member has borrow history, so they can’t be deleted — disable them instead')
+      }
+      throw error
+    }
   }
 
   /**
@@ -49,10 +74,13 @@ export class MembersService {
   async insert(
     manager: EntityManager,
     values: { name: string; email?: string | null; phone?: string | null; userId?: number },
+    actor: Actor,
   ) {
     const { identifiers } = await manager.insert(Member, { ...values, memberNo: `TMP-${randomUUID()}` })
     const id = identifiers[0]!.id as number
-    await manager.update(Member, id, { memberNo: `M${String(id).padStart(3, '0')}` })
+    const memberNo = `M${String(id).padStart(3, '0')}`
+    await manager.update(Member, id, { memberNo })
+    await logActivity(manager, actor, { action: 'member_joined', subject: values.name, detail: memberNo, memberId: id })
     return manager.findOneByOrFail(Member, { id })
   }
 }

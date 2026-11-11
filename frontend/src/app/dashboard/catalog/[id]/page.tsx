@@ -72,7 +72,7 @@ export default async function BookPage({ params }: { params: Promise<{ id: strin
             <table className="table">
               <thead>
                 <tr>
-                  <th>Copy</th>
+                  <th>Book code</th>
                   <th>Member</th>
                   <th>Issued</th>
                   <th>Due</th>

@@ -163,6 +163,13 @@ a {
 .dot-member_joined { background: #1baf7a; }
 .dot-issued { background: #eda100; }
 .dot-returned { background: var(--muted); }
+.dot-book_updated, .dot-member_updated, .dot-member_enabled { background: #2f7fd8; }
+.dot-book_deleted, .dot-member_deleted, .dot-member_disabled { background: #b42318; }
+
+.activity-removed {
+  color: var(--muted);
+  font-style: italic;
+}
 
 .activity-text {
   min-width: 0;
@@ -178,7 +185,7 @@ a {
   font-weight: 600;
 }
 
-.activity-list time {
+.activity-meta {
   display: block;
   color: var(--muted);
   font-size: 11px;
@@ -213,7 +220,7 @@ a {
 }
 
 .container {
-  max-width: 1080px;
+  max-width: 1440px;
   padding: 36px 40px 64px;
   margin: 0 auto;
 }
@@ -718,6 +725,104 @@ a {
   background: var(--red-soft);
 }
 
+.btn-danger-solid {
+  background: var(--red);
+  color: #fff;
+}
+
+.btn-danger-solid:hover {
+  background: var(--red);
+  filter: brightness(0.92);
+}
+
+.toast-stack {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(420px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(16, 24, 40, 0.16);
+  font-size: 13px;
+  pointer-events: auto;
+  animation: toast-in 0.18s ease-out;
+}
+
+.toast .activity-dot {
+  margin-top: 5px;
+  flex: none;
+}
+
+.toast-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.toast-close {
+  flex: none;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+
+.confirm-dialog {
+  width: min(420px, calc(100vw - 32px));
+  padding: 22px 22px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 20px 50px rgba(16, 24, 40, 0.18);
+}
+
+.confirm-dialog::backdrop {
+  background: rgba(16, 24, 40, 0.45);
+}
+
+.confirm-dialog h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.confirm-dialog p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
 .toolbar-note {
   align-self: center;
   margin-left: auto;
@@ -1132,8 +1237,9 @@ a {
 
 /* ---------- activity on the dashboard and its own page ---------- */
 
-.dash-activity {
-  margin-bottom: 26px;
+/* Half-width column: let the loans table scroll instead of overflowing. */
+.dash-borrows {
+  overflow-x: auto;
 }
 
 /* One column, so the timeline reads straight down. */

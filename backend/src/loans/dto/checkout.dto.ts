@@ -3,8 +3,8 @@ import { ToUpperCase } from '../../common/transforms.js'
 
 export class CheckoutDto {
   @ToUpperCase()
-  @IsString({ message: 'Copy barcode is required' })
-  @IsNotEmpty({ message: 'Copy barcode is required' })
+  @IsString({ message: 'Book code is required' })
+  @IsNotEmpty({ message: 'Book code is required' })
   barcode!: string
 
   @ToUpperCase()

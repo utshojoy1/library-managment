@@ -3,6 +3,7 @@
 import './env.js'
 import { join } from 'node:path'
 import { DataSource } from 'typeorm'
+import { ActivityLog } from './entities/activity-log.entity.js'
 import { Book } from './entities/book.entity.js'
 import { Copy } from './entities/copy.entity.js'
 import { Email } from './entities/email.entity.js'
@@ -19,7 +20,7 @@ export const AppDataSource = new DataSource({
   // The schema only changes through migrations, never by syncing entities.
   synchronize: false,
   logging: false,
-  entities: [User, Session, EmailToken, Member, Book, Copy, Loan, Email],
+  entities: [User, Session, EmailToken, Member, Book, Copy, Loan, Email, ActivityLog],
   migrations: [join(import.meta.dirname, 'migrations/*.js')],
   subscribers: [],
 })

@@ -16,7 +16,7 @@ export default async function ActivityPage() {
       <header className="page-head">
         <div>
           <h1>Activity</h1>
-          <p>The latest {LIMIT} events: books added, members joined, books issued and returned.</p>
+          <p>The latest {LIMIT} logged changes to books, members and loans, and who made each one.</p>
         </div>
       </header>
 

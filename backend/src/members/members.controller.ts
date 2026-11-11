@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Put } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Patch, Post, Put } from '@nestjs/common'
+import { CurrentUser } from '../common/decorators/current-user.decorator.js'
 import { Roles } from '../common/decorators/roles.decorator.js'
-import { STAFF } from '../common/roles.js'
+import { STAFF, type SessionUser } from '../common/roles.js'
 import { CreateMemberDto } from './dto/create-member.dto.js'
 import { SetMemberStatusDto, UpdateMemberDto } from './dto/update-member.dto.js'
 import { MembersService } from './members.service.js'
@@ -16,20 +17,27 @@ export class MembersController {
   }
 
   @Post()
-  create(@Body() dto: CreateMemberDto) {
-    return this.members.create(dto)
+  create(@Body() dto: CreateMemberDto, @CurrentUser() user: SessionUser) {
+    return this.members.create(dto, user)
   }
 
   @Put(':id')
   @Roles('super_admin')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateMemberDto) {
-    return this.members.update(id, { name: dto.name, email: dto.email || null, phone: dto.phone || null })
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateMemberDto, @CurrentUser() user: SessionUser) {
+    return this.members.update(id, { name: dto.name, email: dto.email || null, phone: dto.phone || null }, user)
   }
 
   /** A disabled member keeps their current loans but can't borrow (checkout checks isActive). */
   @Patch(':id/status')
   @Roles('super_admin')
-  setStatus(@Param('id', ParseIntPipe) id: number, @Body() dto: SetMemberStatusDto) {
-    return this.members.update(id, { isActive: dto.isActive })
+  setStatus(@Param('id', ParseIntPipe) id: number, @Body() dto: SetMemberStatusDto, @CurrentUser() user: SessionUser) {
+    return this.members.update(id, { isActive: dto.isActive }, user)
+  }
+
+  @Delete(':id')
+  @Roles('super_admin')
+  @HttpCode(204)
+  remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: SessionUser) {
+    return this.members.remove(id, user)
   }
 }

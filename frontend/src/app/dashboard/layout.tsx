@@ -3,6 +3,7 @@ import { verifySession } from '@/lib/dal'
 import { ROLE_LABELS } from '@/lib/format'
 import { STAFF } from '@/lib/types'
 import { signOut } from '@/actions/session'
+import { ActivityToasts } from '@/components/app-shell/activity-toasts'
 import { NavLinks, type NavItem } from '@/components/app-shell/nav-links'
 import { VerifyBanner } from '@/components/app-shell/verify-banner'
 
@@ -64,6 +65,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           </form>
         </div>
       </aside>
+
+      {isStaff && <ActivityToasts />}
 
       <main className="main">
         <div className="container">

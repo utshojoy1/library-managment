@@ -14,7 +14,8 @@ export class StatsController {
   }
 
   @Get('activity')
-  activity(@Query('limit', new DefaultValuePipe(12), ParseIntPipe) limit: number) {
-    return this.stats.activity(Math.min(Math.max(limit, 1), 200))
+  activity(@Query('limit', new DefaultValuePipe(12), ParseIntPipe) limit: number, @Query('scope') scope?: string) {
+    // `?scope=books`: only events about a book (added/edited/deleted, issued, returned).
+    return this.stats.activity(Math.min(Math.max(limit, 1), 200), scope === 'books')
   }
 }

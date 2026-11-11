@@ -1,15 +1,26 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { api } from '@/lib/api'
 import { requireRole } from '@/lib/dal'
-import { daysUntil, formatDate } from '@/lib/format'
-import { STAFF, type Loan, type Member } from '@/lib/types'
-import { CheckoutForm, ReturnForm } from '@/components/circulation/circulation-forms'
+import { formatDate, VERB } from '@/lib/format'
+import { STAFF, type Activity, type Book, type Member } from '@/lib/types'
+import { getActivity } from '@/components/app-shell/activity-list'
+import { CheckoutForm, type CopyOption, ReturnForm } from '@/components/circulation/circulation-forms'
 
 export const metadata: Metadata = { title: 'Circulation' }
 
+const EVENT_CHIP: Partial<Record<Activity['type'], string>> = {
+  issued: 'chip-green',
+  returned: 'chip-gray',
+  book_added: 'chip-indigo',
+  book_updated: 'chip-amber',
+  book_deleted: 'chip-red',
+}
+
 export default async function CirculationPage() {
   await requireRole(STAFF)
-  const [loans, members] = await Promise.all([api<Loan[]>('/loans?limit=10'), api<Member[]>('/members')])
+  const [activity, members, books] = await Promise.all([getActivity(10, 'books'), api<Member[]>('/members'), api<Book[]>('/books')])
+  const copies: CopyOption[] = books.flatMap((b) => b.copies.map((c) => ({ ...c, title: b.title, author: b.author })))
 
   return (
     <div>
@@ -21,41 +32,44 @@ export default async function CirculationPage() {
       </header>
 
       <div className="split">
-        <CheckoutForm members={members} />
-        <ReturnForm />
+        <CheckoutForm members={members} copies={copies} />
+        <ReturnForm copies={copies} />
       </div>
 
       <section className="card">
-        <div className="card-head"><h2>Recent activity</h2></div>
-        {!loans.length ? (
-          <div className="empty">No borrows recorded yet.</div>
+        <div className="card-head">
+          <h2>Recent activity</h2>
+          <Link href="/dashboard/activity" className="link-sm">View all</Link>
+        </div>
+        {!activity ? (
+          <div className="empty">Activity couldn’t be loaded. Try again shortly.</div>
+        ) : !activity.length ? (
+          <div className="empty">No book activity recorded yet.</div>
         ) : (
           <table className="table">
             <thead>
               <tr>
                 <th>Book</th>
-                <th>Member</th>
-                <th>Issued</th>
-                <th>Due</th>
-                <th>Returned</th>
+                <th>Event</th>
+                <th>Member / details</th>
+                <th>By</th>
+                <th>When</th>
               </tr>
             </thead>
             <tbody>
-              {loans.map((loan) => (
-                <tr key={loan.id}>
-                  <td><strong>{loan.bookTitle}</strong></td>
-                  <td>{loan.memberName}</td>
-                  <td>{formatDate(loan.issuedAt)}</td>
-                  <td>{formatDate(loan.dueAt)}</td>
+              {activity.map((item, i) => (
+                <tr key={`${item.type}-${item.at}-${i}`}>
                   <td>
-                    {loan.status === 'returned' ? (
-                      <span className="chip chip-gray">{formatDate(loan.returnedAt)}</span>
-                    ) : daysUntil(loan.dueAt) < 0 ? (
-                      <span className="chip chip-red">Overdue</span>
+                    {item.bookId ? (
+                      <Link href={`/dashboard/catalog/${item.bookId}`}><strong>{item.subject}</strong></Link>
                     ) : (
-                      <span className="chip chip-green">Borrowed</span>
+                      <strong>{item.subject}</strong>
                     )}
                   </td>
+                  <td><span className={`chip ${EVENT_CHIP[item.type] ?? 'chip-gray'}`}>{VERB[item.type] ?? item.type}</span></td>
+                  <td>{item.detail ?? '—'}</td>
+                  <td>{item.actor ?? '—'}</td>
+                  <td title={new Date(item.at).toLocaleString('en-GB')}>{formatDate(item.at)}</td>
                 </tr>
               ))}
             </tbody>
