@@ -7,7 +7,7 @@ import { MembersView } from '@/components/members/members-view'
 export const metadata: Metadata = { title: 'Members' }
 
 export default async function MembersPage() {
-  const user = await requireRole(STAFF)
+  await requireRole(STAFF)
   const members = await api<Member[]>('/members')
-  return <MembersView members={members} canManage={user.role === 'super_admin'} />
+  return <MembersView members={members} />
 }

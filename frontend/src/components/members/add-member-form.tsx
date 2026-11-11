@@ -7,7 +7,7 @@ import { PasswordInput } from '@/components/auth/password-input'
 
 const EMPTY = { name: '', email: '', phone: '', password: '' }
 
-/** Adds a member, or edits `member` when given (super admin only). */
+/** Adds a member, or edits `member` when given. */
 export function AddMemberForm({ member, onDone }: { member?: Member; onDone: () => void }) {
   const [state, action, pending] = useActionState<FormState, FormData>(
     member ? updateMember.bind(null, member.id) : createMember,

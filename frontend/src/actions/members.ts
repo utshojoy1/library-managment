@@ -19,8 +19,6 @@ export async function createMember(_prev: FormState, form: FormData): Promise<Fo
   return { ok: 'Member added.' }
 }
 
-// Edit, status and delete are super admin only; setting a password is any staff. The API enforces both.
-
 export async function updateMember(id: number, _prev: FormState, form: FormData): Promise<FormState> {
   try {
     await api(`/members/${id}`, {
@@ -62,14 +60,4 @@ export async function deleteMember(id: number): Promise<FormState> {
   }
   revalidatePath('/dashboard', 'layout')
   return { ok: 'Member deleted.' }
-}
-
-export async function setMemberPassword(id: number, _prev: FormState, form: FormData): Promise<FormState> {
-  try {
-    await apiResponse(`/members/${id}/password`, { method: 'PUT', body: { password: form.get('password') } }) // 204
-  } catch (error) {
-    return formError(error)
-  }
-  revalidatePath('/dashboard', 'layout') // the change shows in the activity feed
-  return { ok: 'Password updated. They’ve been signed out everywhere.' }
 }

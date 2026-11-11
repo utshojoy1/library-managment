@@ -6,10 +6,9 @@ import type { Member } from '@/lib/types'
 import { AddMemberForm } from './add-member-form'
 import { MemberStatusButton } from './member-status-button'
 import { DeleteMemberButton } from './delete-member-button'
-import { SetPasswordButton } from './set-password-button'
 
-/** Client for the add/edit form toggle; the list comes from server data. Editing and disabling are super-admin only. */
-export function MembersView({ members, canManage }: { members: Member[]; canManage: boolean }) {
+/** Client for the add/edit form toggle; the list comes from server data. Any staff can add, edit, disable and delete. */
+export function MembersView({ members }: { members: Member[] }) {
   // Which form is open: none, a new member, or the member being edited.
   const [editing, setEditing] = useState<Member | 'new' | null>(null)
   const [error, setError] = useState('')
@@ -81,23 +80,18 @@ export function MembersView({ members, canManage }: { members: Member[]; canMana
                   </td>
                   <td>
                     <div className="row-actions">
-                      {/* Any staff can set a member's password; the rest is super-admin only. */}
-                      {canManage && (
-                        <button
-                          type="button"
-                          className="btn btn-sm"
-                          onClick={() => {
-                            setEditing(member)
-                            window.scrollTo({ top: 0, behavior: 'smooth' })
-                          }}
-                        >
-                          Edit
-                        </button>
-                      )}
-                      {/* Super admins reset passwords from Edit; admins have no Edit, so they keep this button. */}
-                      {!canManage && member.hasAccount && <SetPasswordButton member={member} />}
-                      {canManage && <MemberStatusButton member={member} onError={setError} />}
-                      {canManage && <DeleteMemberButton member={member} onError={setError} />}
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() => {
+                          setEditing(member)
+                          window.scrollTo({ top: 0, behavior: 'smooth' })
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <MemberStatusButton member={member} onError={setError} />
+                      <DeleteMemberButton member={member} onError={setError} />
                     </div>
                   </td>
                 </tr>

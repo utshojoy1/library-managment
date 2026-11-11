@@ -23,19 +23,17 @@ export class MembersController {
   }
 
   @Put(':id')
-  @Roles('super_admin')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateMemberDto, @CurrentUser() user: SessionUser) {
     return this.members.update(id, { name: dto.name, email: dto.email || null, phone: dto.phone || null }, user)
   }
 
   /** A disabled member keeps their current loans but can't borrow (checkout checks isActive). */
   @Patch(':id/status')
-  @Roles('super_admin')
   setStatus(@Param('id', ParseIntPipe) id: number, @Body() dto: SetMemberStatusDto, @CurrentUser() user: SessionUser) {
     return this.members.update(id, { isActive: dto.isActive }, user)
   }
 
-  /** Sets the login password of a member's account and signs them out everywhere. Any staff (class-level @Roles). */
+  /** Sets the login password of a member's account and signs them out everywhere. */
   @Put(':id/password')
   @HttpCode(204)
   setPassword(@Param('id', ParseIntPipe) id: number, @Body() dto: SetMemberPasswordDto, @CurrentUser() user: SessionUser) {
@@ -43,7 +41,6 @@ export class MembersController {
   }
 
   @Delete(':id')
-  @Roles('super_admin')
   @HttpCode(204)
   remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: SessionUser) {
     return this.members.remove(id, user)
