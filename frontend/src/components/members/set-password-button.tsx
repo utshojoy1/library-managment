@@ -5,7 +5,7 @@ import type { FormState, Member } from '@/lib/types'
 import { setMemberPassword } from '@/actions/members'
 import { PasswordInput } from '@/components/auth/password-input'
 
-/** Super admin only (the API enforces it): sets a new login password for a member's account. */
+/** Any staff; only a super admin may reset a staff-linked account (the API enforces it). */
 export function SetPasswordButton({ member }: { member: Member }) {
   const dialog = useRef<HTMLDialogElement>(null)
   // Bumped on every open so the form (and its success/error message) starts fresh.

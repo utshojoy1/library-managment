@@ -1,6 +1,7 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm'
 import { randomUUID } from 'node:crypto'
+import { isEmail } from 'class-validator'
 import { DataSource, type EntityManager, Repository } from 'typeorm'
 import type { CreateMemberDto } from './dto/create-member.dto.js'
 import { hashPassword } from '../auth/password.js'
@@ -8,7 +9,8 @@ import { Member } from '../entities/member.entity.js'
 import { Session } from '../entities/session.entity.js'
 import { User } from '../entities/user.entity.js'
 import { type Actor, logActivity } from '../common/activity.js'
-import { isForeignKeyViolation } from '../common/db-errors.js'
+import type { SessionUser } from '../common/roles.js'
+import { isForeignKeyViolation, isUniqueViolation } from '../common/db-errors.js'
 
 @Injectable()
 export class MembersService {
@@ -36,10 +38,24 @@ export class MembersService {
       .getRawMany()
   }
 
-  create(dto: CreateMemberDto, actor: Actor) {
-    return this.dataSource.transaction((manager) =>
-      this.insert(manager, { name: dto.name, email: dto.email || null, phone: dto.phone || null }, actor),
-    )
+  async create(dto: CreateMemberDto, actor: Actor) {
+    const email = dto.email || null
+    if (dto.password && !email) throw new BadRequestException('An email is required to create a login')
+    if (dto.password && !isEmail(email)) throw new BadRequestException('Enter a valid email address')
+    const passwordHash = dto.password ? await hashPassword(dto.password) : null
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        // With a password, also create the login account, the same shape self-registration makes.
+        const userId = passwordHash
+          ? (await manager.save(manager.create(User, { name: dto.name, email: email!.toLowerCase(), passwordHash, role: 'member' }))).id
+          : undefined
+        return this.insert(manager, { name: dto.name, email, phone: dto.phone || null, userId }, actor)
+      })
+    } catch (error) {
+      // Only users.email can collide here: member numbers are random until renamed.
+      if (isUniqueViolation(error)) throw new ConflictException('An account with this email already exists')
+      throw error
+    }
   }
 
   /** Changing only `isActive` logs as enabled/disabled; anything else as an edit. */
@@ -54,12 +70,17 @@ export class MembersService {
     })
   }
 
-  async setPassword(id: number, password: string, actor: Actor) {
+  async setPassword(id: number, password: string, actor: SessionUser) {
     const passwordHash = await hashPassword(password)
     await this.dataSource.transaction(async (manager) => {
       const member = await manager.findOneBy(Member, { id })
       if (!member) throw new NotFoundException('Member not found')
       if (!member.userId) throw new BadRequestException('This member has no login account')
+      // A member card can be linked to a staff account; only a super admin may reset staff passwords.
+      const account = await manager.findOneByOrFail(User, { id: member.userId })
+      if (account.role !== 'member' && actor.role !== 'super_admin') {
+        throw new ForbiddenException('Only a super admin can change a staff account’s password')
+      }
       await manager.update(User, member.userId, { passwordHash })
       // Same as a self-service reset: every existing session ends.
       await manager.delete(Session, { userId: member.userId })

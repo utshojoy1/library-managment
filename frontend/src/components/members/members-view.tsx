@@ -56,7 +56,7 @@ export function MembersView({ members, canManage }: { members: Member[]; canMana
                 <th>Joined</th>
                 <th>Borrowed</th>
                 <th>Status</th>
-                {canManage && <th aria-label="Actions" />}
+                <th aria-label="Actions" />
               </tr>
             </thead>
             <tbody>
@@ -79,9 +79,10 @@ export function MembersView({ members, canManage }: { members: Member[]; canMana
                       {member.isActive ? 'Active' : 'Disabled'}
                     </span>
                   </td>
-                  {canManage && (
-                    <td>
-                      <div className="row-actions">
+                  <td>
+                    <div className="row-actions">
+                      {/* Any staff can set a member's password; the rest is super-admin only. */}
+                      {canManage && (
                         <button
                           type="button"
                           className="btn btn-sm"
@@ -92,12 +93,13 @@ export function MembersView({ members, canManage }: { members: Member[]; canMana
                         >
                           Edit
                         </button>
-                        {member.hasAccount && <SetPasswordButton member={member} />}
-                        <MemberStatusButton member={member} onError={setError} />
-                        <DeleteMemberButton member={member} onError={setError} />
-                      </div>
-                    </td>
-                  )}
+                      )}
+                      {/* Super admins reset passwords from Edit; admins have no Edit, so they keep this button. */}
+                      {!canManage && member.hasAccount && <SetPasswordButton member={member} />}
+                      {canManage && <MemberStatusButton member={member} onError={setError} />}
+                      {canManage && <DeleteMemberButton member={member} onError={setError} />}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

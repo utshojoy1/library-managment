@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator'
+import { IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator'
+import { PASSWORD_RULE } from '../../auth/dto/register.dto.js'
 import { Trim } from '../../common/transforms.js'
 
 export class CreateMemberDto {
@@ -16,4 +17,10 @@ export class CreateMemberDto {
   @IsOptional()
   @IsString()
   phone?: string
+
+  /** Optional: when given, the member also gets a login account (needs an email). Never trimmed. */
+  @IsOptional()
+  @IsString({ message: PASSWORD_RULE })
+  @MinLength(8, { message: PASSWORD_RULE })
+  password?: string
 }

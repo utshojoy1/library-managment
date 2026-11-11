@@ -3,8 +3,9 @@
 import { useActionState, useEffect, useState } from 'react'
 import type { FormState, Member } from '@/lib/types'
 import { createMember, updateMember } from '@/actions/members'
+import { PasswordInput } from '@/components/auth/password-input'
 
-const EMPTY = { name: '', email: '', phone: '' }
+const EMPTY = { name: '', email: '', phone: '', password: '' }
 
 /** Adds a member, or edits `member` when given (super admin only). */
 export function AddMemberForm({ member, onDone }: { member?: Member; onDone: () => void }) {
@@ -13,7 +14,7 @@ export function AddMemberForm({ member, onDone }: { member?: Member; onDone: () 
     {},
   )
   // Controlled, so a rejected submit keeps what was typed (React resets uncontrolled forms after an action).
-  const [form, setForm] = useState(member ? { name: member.name, email: member.email ?? '', phone: member.phone ?? '' } : EMPTY)
+  const [form, setForm] = useState(member ? { ...EMPTY, name: member.name, email: member.email ?? '', phone: member.phone ?? '' } : EMPTY)
   const set = (field: keyof typeof EMPTY) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [field]: e.target.value }))
 
@@ -33,15 +34,30 @@ export function AddMemberForm({ member, onDone }: { member?: Member; onDone: () 
           </div>
           <div className="field">
             <label className="label" htmlFor="email">Email</label>
-            <input id="email" name="email" className="input" type="email" value={form.email} onChange={set('email')} />
+            <input id="email" name="email" className="input" type="email" value={form.email} onChange={set('email')} required={!member && !!form.password} />
           </div>
           <div className="field">
             <label className="label" htmlFor="phone">Phone</label>
             <input id="phone" name="phone" className="input" value={form.phone} onChange={set('phone')} />
           </div>
+          {(!member || member.hasAccount) && (
+            <div className="field full">
+              <label className="label" htmlFor="password">{member ? 'Reset password' : 'Password'}</label>
+              <PasswordInput
+                id="password"
+                name="password"
+                minLength={8}
+                autoComplete="new-password"
+                placeholder={member ? 'Leave empty to keep the current password' : 'At least 8 characters'}
+                value={form.password}
+                onChange={set('password')}
+              />
+              {member && <p className="hint" style={{ margin: 0 }}>Changing it signs {member.name} out of every device.</p>}
+            </div>
+          )}
           {!member && (
             <p className="full" style={{ margin: 0, color: 'var(--muted)', fontSize: 12.5 }}>
-              A membership number is generated automatically (e.g. M004).
+              A membership number is generated automatically (e.g. M004). Set a password to give them a login with their email; leave it empty for a card only.
             </p>
           )}
           <div className="actions full">

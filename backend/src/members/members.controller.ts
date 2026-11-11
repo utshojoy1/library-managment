@@ -35,9 +35,8 @@ export class MembersController {
     return this.members.update(id, { isActive: dto.isActive }, user)
   }
 
-  /** Sets the login password of a member's account and signs them out everywhere. */
+  /** Sets the login password of a member's account and signs them out everywhere. Any staff (class-level @Roles). */
   @Put(':id/password')
-  @Roles('super_admin')
   @HttpCode(204)
   setPassword(@Param('id', ParseIntPipe) id: number, @Body() dto: SetMemberPasswordDto, @CurrentUser() user: SessionUser) {
     return this.members.setPassword(id, dto.password, user)
