@@ -8,6 +8,7 @@ import { VERB } from '@/lib/format'
 const POLL_MS = 15_000
 const SHOW_MS = 6_000
 const MAX_TOASTS = 3
+export const ACTIVITY_EVENT = 'library:activity'
 
 type Toast = Activity & { key: string }
 
@@ -22,10 +23,22 @@ export function ActivityToasts() {
 
   useEffect(() => {
     let stopped = false
+    // The event and the poll can overlap: run one check at a time (no duplicate popups), and re-run once if asked mid-check.
+    let busy = false
+    let again = false
 
-    const check = async () => {
+    const check = async (): Promise<void> => {
       if (document.hidden) return
-      const items = await latestActivity()
+      if (busy) {
+        again = true
+        return
+      }
+      busy = true
+      const items = await latestActivity().finally(() => (busy = false))
+      if (again) {
+        again = false
+        void check()
+      }
       if (stopped || !items?.length) return
       const newest = Math.max(...items.map((i) => new Date(i.at).getTime()))
       if (seen.current !== null) {
@@ -43,9 +56,12 @@ export function ActivityToasts() {
 
     check()
     const timer = setInterval(check, POLL_MS)
+    // Actions in this tab announce themselves so their popup shows now, not on the next poll.
+    window.addEventListener(ACTIVITY_EVENT, check)
     return () => {
       stopped = true
       clearInterval(timer)
+      window.removeEventListener(ACTIVITY_EVENT, check)
     }
   }, [])
 

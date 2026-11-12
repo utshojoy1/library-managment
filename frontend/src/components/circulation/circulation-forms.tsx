@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from 'react'
 import type { FormState, Member } from '@/lib/types'
 import { checkout, returnCopy } from '@/actions/loans'
+import { ACTIVITY_EVENT } from '@/components/app-shell/activity-toasts'
 
 function Result({ state }: { state: FormState }) {
   if (state.error) return <div className="banner banner-error">{state.error}</div>
@@ -80,6 +81,7 @@ export function CheckoutForm({ members, copies }: { members: Pick<Member, 'membe
   // After an issue, keep the member and due date and get ready for the next scan.
   useEffect(() => {
     if (!state.ok) return
+    window.dispatchEvent(new Event(ACTIVITY_EVENT))
     setBarcode('')
     barcodeInput.current?.focus()
   }, [state])
@@ -128,7 +130,9 @@ export function ReturnForm({ copies }: { copies: CopyOption[] }) {
   const [barcode, setBarcode] = useState('')
 
   useEffect(() => {
-    if (state.ok) setBarcode('')
+    if (!state.ok) return
+    window.dispatchEvent(new Event(ACTIVITY_EVENT))
+    setBarcode('')
   }, [state])
 
   return (

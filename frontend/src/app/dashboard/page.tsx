@@ -4,8 +4,7 @@ import { ActivityList, getActivity } from '@/components/app-shell/activity-list'
 import { DonutChart, type Slice } from '@/components/dashboard/donut-chart'
 import { api } from '@/lib/api'
 import { verifySession } from '@/lib/dal'
-import { LoanStatus } from '@/components/loans/loan-status'
-import { formatDate } from '@/lib/format'
+import { BorrowsTable } from '@/components/loans/borrows-table'
 import { STAFF, type Loan, type Stats } from '@/lib/types'
 
 export const metadata: Metadata = { title: 'Dashboard' }
@@ -92,51 +91,14 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      <section className="card dash-borrows">
-        <div className="card-head">
-          <h2>{staff ? 'Active borrows' : 'My borrows'}</h2>
-          {stats && stats.overdue > 0 && <span className="chip chip-red">{stats.overdue} overdue</span>}
-        </div>
-
-        {!loans.length ? (
-          <div className="empty">
-            {staff ? 'Nothing is borrowed right now.' : 'You haven’t borrowed anything yet — visit the catalog to find something.'}
-          </div>
-        ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Book</th>
-                {staff && <th>Member</th>}
-                <th>Book code</th>
-                <th>Due</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loans.map((loan) => (
-                <tr key={loan.id}>
-                  <td>
-                    <strong>{loan.bookTitle}</strong>
-                    <div className="mono">{loan.author}</div>
-                  </td>
-                  {staff && (
-                    <td>
-                      {loan.memberName}
-                      <div className="mono">{loan.memberNo}</div>
-                    </td>
-                  )}
-                  <td className="mono">{loan.barcode}</td>
-                  <td>{formatDate(loan.dueAt)}</td>
-                  <td>
-                    <LoanStatus loan={loan} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+      <BorrowsTable
+        className="dash-borrows"
+        title={staff ? 'Active borrows' : 'My borrows'}
+        loans={loans}
+        showMember={staff}
+        overdue={stats?.overdue}
+        empty={staff ? 'Nothing is borrowed right now.' : 'You haven’t borrowed anything yet — visit the catalog to find something.'}
+      />
       </div>
     </div>
   )

@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import { requireRole } from '@/lib/dal'
 import { formatDate, VERB } from '@/lib/format'
-import { STAFF, type Activity, type Book, type Member } from '@/lib/types'
+import { STAFF, type Activity, type Book, type Loan, type Member, type Stats } from '@/lib/types'
+import { BorrowsTable } from '@/components/loans/borrows-table'
 import { getActivity } from '@/components/app-shell/activity-list'
 import { CheckoutForm, type CopyOption, ReturnForm } from '@/components/circulation/circulation-forms'
 
@@ -19,7 +20,13 @@ const EVENT_CHIP: Partial<Record<Activity['type'], string>> = {
 
 export default async function CirculationPage() {
   await requireRole(STAFF)
-  const [activity, members, books] = await Promise.all([getActivity(10, 'books'), api<Member[]>('/members'), api<Book[]>('/books')])
+  const [activity, members, books, loans, stats] = await Promise.all([
+    getActivity(10, 'books'),
+    api<Member[]>('/members'),
+    api<Book[]>('/books'),
+    api<Loan[]>('/loans?status=active&limit=200'),
+    api<Stats>('/stats'),
+  ])
   const copies: CopyOption[] = books.flatMap((b) => b.copies.map((c) => ({ ...c, title: b.title, author: b.author })))
 
   return (
@@ -36,7 +43,10 @@ export default async function CirculationPage() {
         <ReturnForm copies={copies} />
       </div>
 
-      <section className="card">
+      <div className="charts">
+      <BorrowsTable className="dash-borrows" title="Active borrows" loans={loans} showMember overdue={stats.overdue} empty="Nothing is borrowed right now." />
+
+      <section className="card dash-borrows">
         <div className="card-head">
           <h2>Recent activity</h2>
           <Link href="/dashboard/activity" className="link-sm">View all</Link>
@@ -76,6 +86,7 @@ export default async function CirculationPage() {
           </table>
         )}
       </section>
+      </div>
     </div>
   )
 }
