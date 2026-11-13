@@ -5,12 +5,13 @@ import { isEmail } from 'class-validator'
 import { DataSource, type EntityManager, Repository } from 'typeorm'
 import type { CreateMemberDto } from './dto/create-member.dto.js'
 import { hashPassword } from '../auth/password.js'
+import { Loan } from '../entities/loan.entity.js'
 import { Member } from '../entities/member.entity.js'
 import { Session } from '../entities/session.entity.js'
 import { User } from '../entities/user.entity.js'
 import { type Actor, logActivity } from '../common/activity.js'
 import type { SessionUser } from '../common/roles.js'
-import { isForeignKeyViolation, isUniqueViolation } from '../common/db-errors.js'
+import { isUniqueViolation } from '../common/db-errors.js'
 
 @Injectable()
 export class MembersService {
@@ -88,21 +89,19 @@ export class MembersService {
     })
   }
 
-  async remove(id: number, actor: Actor) {
-    try {
-      await this.dataSource.transaction(async (manager) => {
-        const member = await manager.findOneBy(Member, { id })
-        if (!member) throw new NotFoundException('Member not found')
-        // Loans don't cascade, so the database itself refuses a member with any borrow history.
-        await manager.delete(Member, id)
-        await logActivity(manager, actor, { action: 'member_deleted', subject: member.name, detail: member.memberNo })
-      })
-    } catch (error) {
-      if (isForeignKeyViolation(error)) {
-        throw new ConflictException('This member has borrow history, so they can’t be deleted — disable them instead')
+  remove(id: number, actor: Actor) {
+    return this.dataSource.transaction(async (manager) => {
+      // Lock the member so a checkout can't slip in between the check and the delete.
+      const member = await manager.createQueryBuilder(Member, 'm').where('m.id = :id', { id }).setLock('pessimistic_write').getOne()
+      if (!member) throw new NotFoundException('Member not found')
+      if (await manager.countBy(Loan, { memberId: id, status: 'active' })) {
+        throw new ConflictException('This member still has borrowed books — return them before deleting')
       }
-      throw error
-    }
+      // Keep the borrow history: snapshot who borrowed, then the FK sets member_id to null.
+      await manager.update(Loan, { memberId: id }, { memberName: member.name, memberNo: member.memberNo })
+      await manager.delete(Member, id)
+      await logActivity(manager, actor, { action: 'member_deleted', subject: member.name, detail: member.memberNo })
+    })
   }
 
   /**

@@ -19,12 +19,20 @@ export class Loan {
   @JoinColumn({ name: 'copy_id', foreignKeyConstraintName: 'loans_copy_id_copies_id_fk' })
   copy?: Copy
 
-  @Column('integer', { name: 'member_id' })
-  memberId!: number
+  /** Null once the member is deleted; `memberName`/`memberNo` then keep who borrowed it. */
+  @Column('integer', { name: 'member_id', nullable: true })
+  memberId!: number | null
 
-  @ManyToOne(() => Member)
+  @ManyToOne(() => Member, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'member_id', foreignKeyConstraintName: 'loans_member_id_members_id_fk' })
-  member?: Member
+  member?: Member | null
+
+  /** Snapshot taken when the member is deleted. */
+  @Column('text', { name: 'member_name', nullable: true })
+  memberName!: string | null
+
+  @Column('text', { name: 'member_no', nullable: true })
+  memberNo!: string | null
 
   @CreateDateColumn({ name: 'issued_at', type: 'timestamptz', default: () => 'now()' })
   issuedAt!: Date

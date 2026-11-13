@@ -55,9 +55,10 @@ export class LoansService {
 
   findAll({ status, bookId, limit = 50 }: ListLoansQueryDto) {
     const query = this.loanRows()
-      .innerJoin('l.member', 'm')
-      .addSelect('m.name', 'memberName')
-      .addSelect('m.memberNo', 'memberNo')
+      // Deleted members are gone from the join; fall back to the snapshot on the loan.
+      .leftJoin('l.member', 'm')
+      .addSelect('coalesce(m.name, l.member_name)', 'memberName')
+      .addSelect('coalesce(m.member_no, l.member_no)', 'memberNo')
       .limit(limit)
     if (status) query.andWhere('l.status = :status', { status })
     if (bookId) query.andWhere('c.bookId = :bookId', { bookId })
@@ -129,7 +130,7 @@ export class LoansService {
       if (!loan) throw new ConflictException(`Book code ${barcode} is not borrowed`)
 
       const book = await manager.findOneBy(Book, { id: copy.bookId })
-      const member = await manager.findOneBy(Member, { id: loan.memberId })
+      const member = loan.memberId === null ? null : await manager.findOneBy(Member, { id: loan.memberId })
 
       const returnedAt = new Date()
       await manager.update(Loan, loan.id, { returnedAt, status: 'returned' })

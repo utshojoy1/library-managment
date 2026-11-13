@@ -12,7 +12,7 @@ export function DeleteMemberButton({ member, onError }: { member: Member; onErro
   const remove = async () => {
     const ok = await confirm({
       title: 'Delete member?',
-      message: `${member.name} (${member.memberNo}) will be permanently removed. This can’t be undone.`,
+      message: `${member.name} (${member.memberNo}) will be permanently removed; their borrow history is kept. This can’t be undone.`,
       confirmLabel: 'Delete',
       danger: true,
     })
